@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ScrollToon Playground / Webtoon Test Canvas</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #0d0f12;
+      color: #ECEFF4;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .header-info {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      width: 100%;
+      background: rgba(13, 15, 18, 0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+    .header-info h2 {
+      font-size: 15px;
+      color: #00F5A0;
+    }
+    .comic-container {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #000000;
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+      margin-bottom: 200px;
+    }
+    .panel {
+      width: 100%;
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 24px;
+      border-bottom: 1px solid #1a1a1a;
+      position: relative;
+    }
+    .panel:nth-child(even) {
+      background: #0a0c10;
+    }
+    .panel-num {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.25);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .bubble {
+      background: #FFFFFF;
+      color: #000000;
+      padding: 18px 24px;
+      border-radius: 20px;
+      max-width: 480px;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.4;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      margin: 16px 0;
+      border: 3px solid #000;
+    }
+    .bubble.alt {
+      background: #181b22;
+      color: #00F5A0;
+      border: 2px solid #00F5A0;
+    }
+    .gutter {
+      width: 100%;
+      height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-style: italic;
+      color: rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="header-info">
+    <h2>⚡ ScrollToon Test Canvas</h2>
+    <span>Test Middle-Click (Toggle), Right-Click (Clutch Brake), and Wheel (Engine Friction)</span>
+  </div>
+
+  <div class="comic-container">
+    <div class="panel">
+      <span class="panel-num">Panel 01</span>
+      <div class="bubble">"Wait... is this auto-scrolling on its own?"</div>
+      <div class="bubble alt">"Try middle-clicking or pressing Space to pause!"</div>
+    </div>
+
+    <div class="gutter">[ Dramatic tension gutter... ]</div>
+
+    <div class="panel">
+      <span class="panel-num">Panel 02</span>
+      <div class="bubble">"Hold Right-Click right now to test the CLUTCH BRAKE."</div>
+      <div class="bubble alt">"Notice how it smoothly glides to a stop without any abrupt jerking?"</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">Panel 03</span>
+      <div class="bubble">"Now let go of Right-Click! It eases right back up to cruise speed."</div>
+    </div>
+
+    <div class="gutter">[ Action transition... ]</div>
+
+    <div class="panel">
+      <span class="panel-num">Panel 04</span>
+      <div class="bubble">"Try rolling your scroll wheel UP slightly while it's cruising."</div>
+      <div class="bubble alt">"That's engine friction braking! A strong swipe UP completely halts the page."</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">Panel 05</span>
+      <div class="bubble">"Notice the Dynamic Island at the bottom?"</div>
+      <div class="bubble">"If you don't touch your mouse for 2 seconds, it morphs into a tiny 38px glass bead with a circular progress ring!"</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">Panel 06</span>
+      <div class="bubble">"Hover over the speed number on the island and roll your wheel to dial the speed up or down."</div>
+    </div>
+
+    <div class="panel">
+      <span class="panel-num">Panel 07</span>
+      <div class="bubble alt">"Episode complete. Butter smooth at 120Hz."</div>
+    </div>
+  </div>
+</body>
+</html>
