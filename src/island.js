@@ -1,8 +1,7 @@
 /**
  * ScrollToon - Ultra-Minimal Proximity Ghost Dynamic Island UI
- * Direct tactile key feedback:
- * Pressing ] lights up the '+' button in glowing green.
- * Pressing [ lights up the '-' button in glowing green.
+ * Ghost Ticker: Speed changes animate subtly on the numbers alone
+ * WITHOUT ever waking up the island's low-opacity ghost mode.
  */
 class WebtoonDynamicIsland {
   constructor(scroller) {
@@ -78,10 +77,12 @@ class WebtoonDynamicIsland {
                     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
+      /* Low-opacity ghost mode while cruising */
       .island-wrapper.ghost {
         opacity: 0.16;
       }
 
+      /* Hovering cursor directly over island wakes it to full clarity */
       .island-wrapper:hover {
         opacity: 1 !important;
       }
@@ -164,7 +165,7 @@ class WebtoonDynamicIsland {
         padding: 3px 8px;
         border-radius: 9999px;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        overflow: hidden;
       }
 
       .speed-cluster.slow-mode {
@@ -179,36 +180,28 @@ class WebtoonDynamicIsland {
         box-shadow: 0 0 16px rgba(255, 71, 87, 0.5);
       }
 
-      /* Tactile Backlit Step Buttons (+ and -) */
+      /* Stepper Buttons (- and +) */
       .speed-step-btn {
         background: transparent;
         border: none;
-        color: rgba(255, 255, 255, 0.65);
+        color: rgba(255, 255, 255, 0.6);
         font-size: 14px;
         font-weight: 700;
         cursor: pointer;
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+        transition: background 0.15s ease, color 0.15s ease;
       }
       .speed-step-btn:hover {
         background: rgba(255, 255, 255, 0.2);
         color: #FFFFFF;
       }
 
-      /* LIGHT UP GREEN ON PRESS */
-      .speed-step-btn.lit-green {
-        background: rgba(0, 245, 160, 0.25) !important;
-        color: #00F5A0 !important;
-        box-shadow: 0 0 12px rgba(0, 245, 160, 0.7) !important;
-        transform: scale(1.18) !important;
-      }
-
-      /* Unified Speed Display: shows 1.5x, SLOW, or BRAKE */
+      /* Unified Speed Display: GHOST TICKER */
       .speed-display {
         font-size: 13px;
         font-weight: 700;
@@ -217,7 +210,23 @@ class WebtoonDynamicIsland {
         min-width: 44px;
         text-align: center;
         cursor: ns-resize;
-        transition: color 0.2s ease;
+        display: inline-block;
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                    color 0.2s ease,
+                    text-shadow 0.2s ease;
+      }
+
+      /* Subtle Ghost Ticker Rollover & Luminescence */
+      .speed-display.ticker-up {
+        transform: translateY(-2px);
+        color: #FFFFFF !important;
+        text-shadow: 0 0 10px rgba(0, 245, 160, 0.9);
+      }
+
+      .speed-display.ticker-down {
+        transform: translateY(2px);
+        color: #FFFFFF !important;
+        text-shadow: 0 0 10px rgba(255, 159, 67, 0.9);
       }
 
       .speed-display.slow {
@@ -272,7 +281,6 @@ class WebtoonDynamicIsland {
     this.shadow.innerHTML = `
       <style>${this.getStyles()}</style>
 
-      <!-- Main Dynamic Island -->
       <div class="island-wrapper" id="islandWrapper">
         <div class="island-card" id="islandCard">
           
@@ -360,24 +368,23 @@ class WebtoonDynamicIsland {
     });
   }
 
-  // Lights up '+' button green on ], and '-' button green on [
+  // Ghost Ticker: Animates only the number digits, WITHOUT changing island opacity!
   triggerSpeedFeedback(delta = 0) {
-    this.wakeOpacity();
+    const display = this.shadow.querySelector('#speedDisplay');
+    if (!display) return;
 
-    const speedDecBtn = this.shadow.querySelector('#speedDecBtn');
-    const speedIncBtn = this.shadow.querySelector('#speedIncBtn');
+    display.classList.remove('ticker-up', 'ticker-down');
+    void display.offsetWidth; // re-flow
 
-    if (delta > 0 && speedIncBtn) {
-      speedIncBtn.classList.remove('lit-green');
-      void speedIncBtn.offsetWidth; // re-flow
-      speedIncBtn.classList.add('lit-green');
-      setTimeout(() => speedIncBtn.classList.remove('lit-green'), 320);
-    } else if (delta < 0 && speedDecBtn) {
-      speedDecBtn.classList.remove('lit-green');
-      void speedDecBtn.offsetWidth; // re-flow
-      speedDecBtn.classList.add('lit-green');
-      setTimeout(() => speedDecBtn.classList.remove('lit-green'), 320);
+    if (delta > 0) {
+      display.classList.add('ticker-up');
+    } else if (delta < 0) {
+      display.classList.add('ticker-down');
     }
+
+    setTimeout(() => {
+      display.classList.remove('ticker-up', 'ticker-down');
+    }, 280);
   }
 
   setupDraggable(handle) {
@@ -492,12 +499,10 @@ class WebtoonDynamicIsland {
       speedDisplay.textContent = 'BRAKE';
       speedDisplay.className = 'speed-display brake';
       if (speedCluster) speedCluster.className = 'speed-cluster brake-mode';
-      this.setGhost(false);
     } else if (state.isSlowedDown) {
       speedDisplay.textContent = 'SLOW';
       speedDisplay.className = 'speed-display slow';
       if (speedCluster) speedCluster.className = 'speed-cluster slow-mode';
-      this.setGhost(false);
     } else {
       const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
       speedDisplay.textContent = formattedSpeed;
