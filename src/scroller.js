@@ -1,6 +1,7 @@
 /**
  * ScrollToon - 120Hz Sub-pixel Physics Scroll Engine
- * Uses float accumulation + spring interpolation with immediate friction braking.
+ * Supports normal cruising, two-finger slow-glide (keeps moving at ~35% speed),
+ * and hard clutch braking (stops on Left-Click hold).
  */
 class WebtoonScroller {
   constructor(options = {}) {
@@ -9,10 +10,10 @@ class WebtoonScroller {
     this.currentSpeed = 0;
     this.targetSpeed = 0;
     this.isRunning = false;
-    this.isBraking = false;
+    this.isBraking = false;     // Hard brake (stops)
+    this.isSlowedDown = false; // Two-finger slow-glide (continues down at low speed)
 
-    // Recovery timer for dynamic touchpad friction
-    this.frictionTimer = null;
+    this.slowDownTimer = null;
 
     // Sub-pixel accumulator
     this.subPixelRemainder = 0;
@@ -91,6 +92,7 @@ class WebtoonScroller {
     if (this.isRunning) return;
     this.isRunning = true;
     this.isBraking = false;
+    this.isSlowedDown = false;
     this.targetSpeed = this.cruiseSpeed;
     this.lastTimestamp = performance.now();
     this.loop(this.lastTimestamp);
@@ -101,12 +103,13 @@ class WebtoonScroller {
     if (!this.isRunning) return;
     this.isRunning = false;
     this.isBraking = false;
+    this.isSlowedDown = false;
     this.targetSpeed = 0;
     this.currentSpeed = 0;
     this.subPixelRemainder = 0;
-    if (this.frictionTimer) {
-      clearTimeout(this.frictionTimer);
-      this.frictionTimer = null;
+    if (this.slowDownTimer) {
+      clearTimeout(this.slowDownTimer);
+      this.slowDownTimer = null;
     }
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
@@ -125,7 +128,7 @@ class WebtoonScroller {
 
   setCruiseSpeed(speed) {
     this.cruiseSpeed = Math.max(0.2, Math.min(6.0, Math.round(speed * 10) / 10));
-    if (this.isRunning && !this.isBraking) {
+    if (this.isRunning && !this.isBraking && !this.isSlowedDown) {
       this.targetSpeed = this.cruiseSpeed;
     }
     this.notifyState();
@@ -135,11 +138,11 @@ class WebtoonScroller {
     this.setCruiseSpeed(this.cruiseSpeed + delta);
   }
 
-  // Engage clutch / brake: drop target speed to 0 immediately
+  // Hard Clutch Brake: stops completely while held (Left-Click)
   applyClutch(engaged) {
-    if (this.frictionTimer) {
-      clearTimeout(this.frictionTimer);
-      this.frictionTimer = null;
+    if (this.slowDownTimer) {
+      clearTimeout(this.slowDownTimer);
+      this.slowDownTimer = null;
     }
 
     this.isBraking = engaged;
@@ -153,38 +156,38 @@ class WebtoonScroller {
     this.notifyState();
   }
 
-  // Immediate Two-Finger Touchpad Friction Brake
-  applyTwoFingerBrake() {
-    if (!this.isRunning) return;
+  // Two-Finger Touchpad Slow-Glide: CONTINUES SCROLLING DOWN at ~35% speed
+  applyTwoFingerSlowDown() {
+    if (!this.isRunning || this.isBraking) return;
 
-    this.isBraking = true;
-    // Immediately drop target speed to near zero (crawl/pause)
-    this.targetSpeed = 0.05;
-    // Rapidly cut current speed so the deceleration is immediately noticeable
-    this.currentSpeed = Math.max(0, this.currentSpeed * 0.4);
+    this.isSlowedDown = true;
+    // Set target speed to a gentle crawl (e.g. 1.5x -> 0.45x, minimum 0.35x)
+    const slowSpeed = Math.max(0.35, Math.round(this.cruiseSpeed * 0.35 * 10) / 10);
+    this.targetSpeed = slowSpeed;
 
     this.notifyState();
 
-    // Reset recovery timer: hold the brake while two fingers are moving,
-    // then smoothly ease back up to cruising speed 450ms after fingers stop
-    if (this.frictionTimer) {
-      clearTimeout(this.frictionTimer);
+    if (this.slowDownTimer) {
+      clearTimeout(this.slowDownTimer);
     }
 
-    this.frictionTimer = setTimeout(() => {
-      if (this.isRunning && this.isBraking) {
-        this.isBraking = false;
+    // Keep slow speed while two fingers are moving.
+    // 600ms after fingers stop, smoothly ease back up to full cruising speed!
+    this.slowDownTimer = setTimeout(() => {
+      if (this.isRunning && !this.isBraking && this.isSlowedDown) {
+        this.isSlowedDown = false;
         this.targetSpeed = this.cruiseSpeed;
         this.notifyState();
       }
-      this.frictionTimer = null;
-    }, 450);
+      this.slowDownTimer = null;
+    }, 600);
   }
 
   notifyState() {
     this.onStateChange({
       isRunning: this.isRunning,
       isBraking: this.isBraking,
+      isSlowedDown: this.isSlowedDown,
       cruiseSpeed: this.cruiseSpeed,
       currentSpeed: this.currentSpeed,
       progress: this.getProgress()
@@ -198,9 +201,9 @@ class WebtoonScroller {
     this.lastTimestamp = now;
 
     // Physics interpolation:
-    // When braking: snappy 0.35 deceleration
-    // When accelerating: gentle 0.09 ease-in
-    const lerpRate = this.isBraking ? 0.35 : 0.09;
+    // When braking: rapid deceleration to 0
+    // When slowing down or cruising: gentle spring easing
+    const lerpRate = this.isBraking ? 0.35 : 0.12;
     this.currentSpeed += (this.targetSpeed - this.currentSpeed) * lerpRate;
 
     if (this.isBraking && this.currentSpeed < 0.03) {

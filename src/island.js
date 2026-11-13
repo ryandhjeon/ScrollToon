@@ -1,6 +1,6 @@
 /**
  * ScrollToon - Proximity Ghost Dynamic Island UI with Minimal Speed HUD
- * Sleek, compact pill: Play/Pause, - Speed +, Reading Progress, Brake Badge.
+ * Sleek, compact pill: Play/Pause, - Speed +, Reading Progress, Brake/Slow Badge.
  */
 class WebtoonDynamicIsland {
   constructor(scroller) {
@@ -275,7 +275,7 @@ class WebtoonDynamicIsland {
         min-width: 28px;
       }
 
-      /* Clutch / Brake Status Indicator */
+      /* Brake / Slow Status Indicator */
       .brake-badge {
         font-size: 10px;
         font-weight: 700;
@@ -290,6 +290,10 @@ class WebtoonDynamicIsland {
       }
       .brake-badge.active {
         display: inline-block;
+      }
+      .brake-badge.slow {
+        background: #FF9F43; /* Warm amber for slow-glide */
+        color: #0C1014;
       }
 
       @keyframes pulse {
@@ -400,7 +404,6 @@ class WebtoonDynamicIsland {
     });
   }
 
-  // Shows the minimal HUD toast and pulses the island's speed cluster
   triggerSpeedFeedback(delta = 0) {
     this.wakeOpacity();
 
@@ -555,10 +558,15 @@ class WebtoonDynamicIsland {
     speedDisplay.textContent = formattedSpeed;
 
     if (state.isBraking) {
-      brakeBadge.classList.add('active');
+      brakeBadge.textContent = 'BRAKE';
+      brakeBadge.className = 'brake-badge active';
+      this.setGhost(false);
+    } else if (state.isSlowedDown) {
+      brakeBadge.textContent = 'SLOW';
+      brakeBadge.className = 'brake-badge active slow';
       this.setGhost(false);
     } else {
-      brakeBadge.classList.remove('active');
+      brakeBadge.className = 'brake-badge';
     }
 
     this.updateProgress(state.progress);
