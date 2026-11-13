@@ -1,7 +1,6 @@
 /**
  * ScrollToon - Ultra-Minimal Proximity Ghost Dynamic Island UI
- * Ghost Ticker: Speed changes animate subtly on the numbers alone
- * WITHOUT ever waking up the island's low-opacity ghost mode.
+ * Pure, clean, static speed display. Zero animations, zero rolls, zero popups.
  */
 class WebtoonDynamicIsland {
   constructor(scroller) {
@@ -165,7 +164,6 @@ class WebtoonDynamicIsland {
         padding: 3px 8px;
         border-radius: 9999px;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        overflow: hidden;
       }
 
       .speed-cluster.slow-mode {
@@ -201,7 +199,7 @@ class WebtoonDynamicIsland {
         color: #FFFFFF;
       }
 
-      /* Unified Speed Display: GHOST TICKER */
+      /* Clean, Static Speed Display */
       .speed-display {
         font-size: 13px;
         font-weight: 700;
@@ -210,23 +208,6 @@ class WebtoonDynamicIsland {
         min-width: 44px;
         text-align: center;
         cursor: ns-resize;
-        display: inline-block;
-        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-                    color 0.2s ease,
-                    text-shadow 0.2s ease;
-      }
-
-      /* Subtle Ghost Ticker Rollover & Luminescence */
-      .speed-display.ticker-up {
-        transform: translateY(-2px);
-        color: #FFFFFF !important;
-        text-shadow: 0 0 10px rgba(0, 245, 160, 0.9);
-      }
-
-      .speed-display.ticker-down {
-        transform: translateY(2px);
-        color: #FFFFFF !important;
-        text-shadow: 0 0 10px rgba(255, 159, 67, 0.9);
       }
 
       .speed-display.slow {
@@ -335,12 +316,10 @@ class WebtoonDynamicIsland {
     speedDecBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.scroller.adjustCruiseSpeed(-0.1);
-      this.triggerSpeedFeedback(-0.1);
     });
     speedIncBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.scroller.adjustCruiseSpeed(0.1);
-      this.triggerSpeedFeedback(0.1);
     });
 
     // Wheel over speed cluster to dial speed
@@ -349,7 +328,6 @@ class WebtoonDynamicIsland {
       e.stopPropagation();
       const delta = e.deltaY < 0 ? 0.1 : -0.1;
       this.scroller.adjustCruiseSpeed(delta);
-      this.triggerSpeedFeedback(delta);
     }, { passive: false });
 
     // Dragging
@@ -368,23 +346,9 @@ class WebtoonDynamicIsland {
     });
   }
 
-  // Ghost Ticker: Animates only the number digits, WITHOUT changing island opacity!
-  triggerSpeedFeedback(delta = 0) {
-    const display = this.shadow.querySelector('#speedDisplay');
-    if (!display) return;
-
-    display.classList.remove('ticker-up', 'ticker-down');
-    void display.offsetWidth; // re-flow
-
-    if (delta > 0) {
-      display.classList.add('ticker-up');
-    } else if (delta < 0) {
-      display.classList.add('ticker-down');
-    }
-
-    setTimeout(() => {
-      display.classList.remove('ticker-up', 'ticker-down');
-    }, 280);
+  // Purely updates the value cleanly with zero animation/effects
+  triggerSpeedFeedback() {
+    // No-op: clean static text update
   }
 
   setupDraggable(handle) {
