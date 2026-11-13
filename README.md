@@ -1,5 +1,21 @@
-# ScrollToon ⚡
-> Minimal autoscroller Chrome Extension for webtoons and manga.
+# ScrollToon
+
+ScrollToon is a Chrome Extension designed for high-refresh-rate vertical comic reading.
+
+---
+
+## Objective
+
+Reading long-format webtoons causes physical hand fatigue from repetitive manual scrolling. Standard browser autoscrollers often cause screen jitter, block dialogue panels with bulky user interfaces, and interrupt native trackpad gestures.
+
+The objective of ScrollToon is to provide a fluid, hands-free reading experience while maintaining complete tactile control.
+
+### User Value
+- **Eliminate Hand Fatigue:** Scroll long chapters automatically at customized speeds.
+- **Crystal-Clear Reading:** View comic artwork through an ultra-low opacity interface without background blur.
+- **Instant Reading Pauses:** Hold the left mouse button to freeze the screen immediately for dialogue inspection.
+- **Continuous Reading Flow:** Preload comic images 3500 pixels ahead to prevent blank loading spaces.
+- **Preserve Native Gestures:** Use your trackpad normally without gesture conflicts.
 
 ---
 
@@ -72,9 +88,9 @@ See [CHANGELOG.md](file:///Users/ryan/git/webtoon-scroller/CHANGELOG.md) for det
 
 | Version | Status | Date | Summary |
 | :--- | :--- | :--- | :--- |
-| **v1.2.0** | 🟢 **Active** | 2026-11-13 | Configurable step size, organic SVG morph, calm breathing animation |
-| **v1.1.0** | 🟡 **Shipped** | 2026-11-13 | Zero-blur glass, center feedback, manual toggle, reset button |
-| **v1.0.0** | ⚪ **Initial** | 2026-11-13 | 120Hz sub-pixel engine, predictive preloader, clutch brake |
+| **v1.2.0** | Active | 2026-11-13 | Configurable step size, organic SVG morph, calm breathing animation |
+| **v1.1.0** | Shipped | 2026-11-13 | Zero-blur glass, center feedback, manual toggle, reset button |
+| **v1.0.0** | Initial | 2026-11-13 | 120Hz sub-pixel engine, predictive preloader, clutch brake |
 
 ---
 
