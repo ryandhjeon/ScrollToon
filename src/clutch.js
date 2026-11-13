@@ -1,7 +1,7 @@
 /**
  * ScrollToon - Dual Input Controller (Mouse & Trackpad Clutch)
  * Left-Click Hold = Hard Brake (Stops completely)
- * Touchpad Two-Finger Counter-Scroll = Slow-Glide (Continues down at ~35% speed)
+ * Touchpad Two-Finger Counter-Scroll = Slow-Glide (Never stops, always continues down at ~35% speed)
  * Middle-Click / Space = Toggle Start/Stop
  * [ / ] = Speed adjustment with HUD feedback
  */
@@ -117,17 +117,10 @@ class WebtoonClutch {
 
       const deltaY = e.deltaY;
 
-      // Two fingers moving UP (deltaY < 0 on macOS default Natural Scrolling)
+      // Two fingers moving UP: NEVER STOPS, strictly slows down into slow-glide
       if (deltaY < -1.5) {
-        e.preventDefault(); // Stop native page jump
-
-        if (deltaY < -140) {
-          // Strong deliberate flick upwards -> user is looking back at panels -> stop
-          this.scroller.stop();
-        } else {
-          // SLOW-GLIDE: Continues scrolling down, but at a comfortable ~35% speed
-          this.scroller.applyTwoFingerSlowDown();
-        }
+        e.preventDefault();
+        this.scroller.applyTwoFingerSlowDown();
       }
     };
 
