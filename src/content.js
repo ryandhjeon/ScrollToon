@@ -14,7 +14,8 @@
     defaultSpeed: 1.5,
     enableLeftClickBrake: true,
     enableMiddleClickToggle: true,
-    enableDoubleTapToggle: true
+    enableDoubleTapToggle: true,
+    islandPosition: null
   };
 
   function boot(settings) {
@@ -32,7 +33,9 @@
     });
 
     // 4. Create Dynamic Island UI
-    island = new window.ScrollToonIsland(scroller);
+    island = new window.ScrollToonIsland(scroller, {
+      initialPosition: settings.islandPosition
+    });
 
     // Initial state push
     island.updateState({
@@ -73,6 +76,9 @@
           scroller.setCruiseSpeed(msg.speed);
           if (island) island.triggerSpeedFeedback(diff);
           sendResponse({ speed: scroller.cruiseSpeed });
+        } else if (msg.action === 'resetPosition') {
+          if (island) island.resetPosition();
+          sendResponse({ status: 'ok' });
         }
       });
     }

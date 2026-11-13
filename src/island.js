@@ -4,8 +4,9 @@
  * so you can see the updated speed with crystal-clear contrast.
  */
 class WebtoonDynamicIsland {
-  constructor(scroller) {
+  constructor(scroller, options = {}) {
     this.scroller = scroller;
+    this.initialPosition = options.initialPosition || null;
     this.isGhosted = false;
     this.proximityThresholdPx = 140;
     this.fadeIdleTimeout = null;
@@ -24,8 +25,12 @@ class WebtoonDynamicIsland {
   init() {
     this.createShadowHost();
     this.render();
+    if (this.initialPosition) {
+      this.setPosition(this.initialPosition);
+    }
     this.bindEvents();
     this.setupProximityWatcher();
+    this.setupWindowResize();
   }
 
   createShadowHost() {
@@ -285,7 +290,7 @@ class WebtoonDynamicIsland {
         <!-- MAIN TOOL CARD (dims to 16% ghost mode) -->
         <div class="island-card" id="islandCard">
           
-          <div class="drag-handle" id="dragHandle" title="Drag to reposition">
+          <div class="drag-handle" id="dragHandle" title="Drag to reposition (Double-click to reset position)">
             <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
               <circle cx="2" cy="2" r="1.5"/>
               <circle cx="8" cy="2" r="1.5"/>
@@ -393,9 +398,12 @@ class WebtoonDynamicIsland {
   setupDraggable(handle) {
     let startX = 0, startY = 0;
     let initialX = 0, initialY = 0;
+    let hasMoved = false;
 
     const onMouseDown = (e) => {
+      if (e.button !== 0) return;
       this.isDragging = true;
+      hasMoved = false;
       startX = e.clientX;
       startY = e.clientY;
       const rect = this.islandEl.getBoundingClientRect();
@@ -411,8 +419,13 @@ class WebtoonDynamicIsland {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
 
-      const newLeft = Math.max(10, Math.min(window.innerWidth - 60, initialX + dx));
-      const newTop = Math.max(10, Math.min(window.innerHeight - 60, initialY + dy));
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+        hasMoved = true;
+      }
+
+      const rect = this.islandEl.getBoundingClientRect();
+      const newLeft = Math.max(10, Math.min(window.innerWidth - rect.width - 10, initialX + dx));
+      const newTop = Math.max(10, Math.min(window.innerHeight - rect.height - 10, initialY + dy));
 
       this.islandEl.style.left = `${newLeft}px`;
       this.islandEl.style.top = `${newTop}px`;
@@ -421,12 +434,72 @@ class WebtoonDynamicIsland {
     };
 
     const onMouseUp = () => {
+      if (this.isDragging && hasMoved) {
+        const rect = this.islandEl.getBoundingClientRect();
+        this.savePosition({ left: Math.round(rect.left), top: Math.round(rect.top) });
+      }
       this.isDragging = false;
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
     };
 
     handle.addEventListener('mousedown', onMouseDown);
+
+    // Double-click handle to reset directly back to default bottom-center position
+    handle.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      this.resetPosition();
+    });
+  }
+
+  savePosition(pos) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+      chrome.storage.sync.set({ islandPosition: pos });
+    }
+  }
+
+  setPosition(pos) {
+    if (!this.islandEl || !pos || typeof pos.left !== 'number' || typeof pos.top !== 'number') return;
+    const rect = this.islandEl.getBoundingClientRect();
+    const width = rect.width || 280;
+    const height = rect.height || 48;
+    const safeLeft = Math.max(10, Math.min(window.innerWidth - width - 10, pos.left));
+    const safeTop = Math.max(10, Math.min(window.innerHeight - height - 10, pos.top));
+
+    this.islandEl.style.left = `${safeLeft}px`;
+    this.islandEl.style.top = `${safeTop}px`;
+    this.islandEl.style.bottom = 'auto';
+    this.islandEl.style.transform = 'none';
+  }
+
+  resetPosition() {
+    if (!this.islandEl) return;
+    this.islandEl.style.transition = 'left 0.3s cubic-bezier(0.16, 1, 0.3, 1), top 0.3s cubic-bezier(0.16, 1, 0.3, 1), bottom 0.3s ease';
+    this.islandEl.style.left = '';
+    this.islandEl.style.top = '';
+    this.islandEl.style.bottom = '';
+    this.islandEl.style.transform = '';
+
+    setTimeout(() => {
+      if (this.islandEl) {
+        this.islandEl.style.transition = '';
+      }
+    }, 350);
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+      chrome.storage.sync.remove('islandPosition');
+    }
+  }
+
+  setupWindowResize() {
+    window.addEventListener('resize', () => {
+      if (!this.islandEl || !this.islandEl.style.left || this.islandEl.style.left === '') return;
+      const rect = this.islandEl.getBoundingClientRect();
+      const safeLeft = Math.max(10, Math.min(window.innerWidth - rect.width - 10, rect.left));
+      const safeTop = Math.max(10, Math.min(window.innerHeight - rect.height - 10, rect.top));
+      this.islandEl.style.left = `${safeLeft}px`;
+      this.islandEl.style.top = `${safeTop}px`;
+    }, { passive: true });
   }
 
   setupProximityWatcher() {

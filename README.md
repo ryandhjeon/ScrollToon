@@ -42,12 +42,14 @@
 
 | Action | Mouse | Trackpad | Keyboard |
 | :--- | :--- | :--- | :--- |
-| **Play / Pause** | **Middle-Click** anywhere | **Two-finger tap / Double-click** margin | <kbd>Space</kbd> |
-| **Clutch Brake (Hold)** | **Hold Right-Click** | **Click & Hold** margin | - |
-| **Engine Deceleration** | **Wheel UP** gently | **Two-finger scroll UP** gently | - |
-| **Emergency Pause** | **Wheel UP** hard swipe | **Two-finger swipe UP** hard | <kbd>Esc</kbd> |
+| **Play / Pause** | **Middle-Click** anywhere | **Double-click** gutter margin | <kbd>Space</kbd> |
+| **Clutch Brake (Hold)** | **Hold Left-Click** | **Click & Hold** | - |
+| **Trackpad Scrolling** | Native | **Native 2-finger scroll** | <kbd>↑</kbd> / <kbd>↓</kbd> |
+| **Emergency Pause** | - | - | <kbd>Esc</kbd> |
 | **Speed Dial (±0.1x)** | **Hover speed & scroll wheel** | **Hover speed & scroll** | <kbd>[</kbd> / <kbd>]</kbd> |
-| **Presets** | Click `1.0x`, `1.5x`, `2.0x`, `3.0x` | Click presets | - |
+| **Speed Feedback** | In-island counter | In-island counter | Floating white badge above tool |
+| **Reposition Tool** | Drag gripper icon | Drag gripper icon | - |
+| **Reset Position** | **Reset button in Settings** or **Double-click gripper** | Double-click gripper | - |
 
 ---
 

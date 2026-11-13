@@ -38,4 +38,35 @@ document.addEventListener('DOMContentLoaded', () => {
   doubleTapToggle.addEventListener('change', () => {
     chrome.storage.sync.set({ enableDoubleTapToggle: doubleTapToggle.checked });
   });
+
+  const resetPositionBtn = document.getElementById('resetPositionBtn');
+  if (resetPositionBtn) {
+    resetPositionBtn.addEventListener('click', () => {
+      chrome.storage.sync.remove('islandPosition', () => {
+        if (chrome.tabs && chrome.tabs.query) {
+          chrome.tabs.query({}, (tabs) => {
+            if (tabs && tabs.length) {
+              tabs.forEach((tab) => {
+                if (tab.id) {
+                  chrome.tabs.sendMessage(tab.id, { action: 'resetPosition' }, () => {
+                    if (chrome.runtime.lastError) {
+                      // Suppress error on internal or non-injected pages
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+
+      const originalHtml = resetPositionBtn.innerHTML;
+      resetPositionBtn.textContent = '✓ Centered!';
+      resetPositionBtn.classList.add('success');
+      setTimeout(() => {
+        resetPositionBtn.innerHTML = originalHtml;
+        resetPositionBtn.classList.remove('success');
+      }, 1200);
+    });
+  }
 });

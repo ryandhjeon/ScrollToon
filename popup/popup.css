@@ -104,6 +104,46 @@ input[type="range"] {
   padding: 4px 0;
 }
 
+.position-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 4px 0;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ECEFF4;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(0, 245, 160, 0.4);
+  color: #00F5A0;
+}
+
+.action-btn:active {
+  transform: scale(0.96);
+}
+
+.action-btn.success {
+  background: rgba(0, 245, 160, 0.15);
+  border-color: #00F5A0;
+  color: #00F5A0;
+}
+
 /* Toggle Switch */
 .switch {
   position: relative;
