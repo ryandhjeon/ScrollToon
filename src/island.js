@@ -11,6 +11,9 @@ class WebtoonDynamicIsland {
     this.proximityThresholdPx = 140;
     this.fadeIdleTimeout = null;
     this.feedbackTimeout = null;
+    this.statusNotification = null;
+    this.hasInitializedRunning = false;
+    this.wasRunning = false;
     this.isDragging = false;
     this.wasBraking = false;
 
@@ -148,6 +151,13 @@ class WebtoonDynamicIsland {
         font-weight: 800;
       }
 
+      /* Active Start/Stop notifications in ghost mode: Crisp 100% Solid Opacity */
+      .island-card.ghost .speed-display.status-start,
+      .island-card.ghost .speed-display.status-stop {
+        opacity: 1 !important;
+        transform: none;
+      }
+
       .island-card:hover {
         background: rgba(16, 20, 26, 0.92) !important;
         box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65), 
@@ -270,6 +280,24 @@ class WebtoonDynamicIsland {
         letter-spacing: 0.6px;
         text-transform: uppercase;
         animation: pulse 0.7s infinite alternate ease-in-out;
+      }
+
+      .speed-display.status-start {
+        color: #00F5A0 !important;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        opacity: 1 !important;
+      }
+
+      .speed-display.status-stop {
+        color: #FF4757 !important;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        opacity: 1 !important;
       }
 
       /* Progress Bar & Reading Stats */
@@ -403,15 +431,40 @@ class WebtoonDynamicIsland {
     if (this.feedbackTimeout) {
       clearTimeout(this.feedbackTimeout);
     }
+    this.statusNotification = null;
 
-    // Set 100% crisp solid white text directly in the center of the tool
-    speedDisplay.classList.add('active-feedback');
+    speedDisplay.textContent = this.scroller.cruiseSpeed.toFixed(1) + 'x';
+    speedDisplay.className = 'speed-display active-feedback';
 
     // Keep crisp white for 850ms, then smoothly fade back to ghost opacity
     this.feedbackTimeout = setTimeout(() => {
       speedDisplay.classList.remove('active-feedback');
       this.feedbackTimeout = null;
     }, 850);
+  }
+
+  // Notifies Start / Stop state in the center display during low opacity mode
+  triggerStatusNotification(type) {
+    const speedDisplay = this.shadow.querySelector('#speedDisplay');
+    if (!speedDisplay || this.scroller.isBraking) return;
+
+    if (this.feedbackTimeout) {
+      clearTimeout(this.feedbackTimeout);
+    }
+
+    this.statusNotification = type;
+    speedDisplay.textContent = type;
+    speedDisplay.className = `speed-display status-${type.toLowerCase()}`;
+
+    // Display for 900ms, then smoothly revert back to cruising speed in ghost opacity
+    this.feedbackTimeout = setTimeout(() => {
+      this.statusNotification = null;
+      this.feedbackTimeout = null;
+      if (!this.scroller.isBraking) {
+        speedDisplay.textContent = this.scroller.cruiseSpeed.toFixed(1) + 'x';
+        speedDisplay.className = 'speed-display';
+      }
+    }, 900);
   }
 
   setupDraggable(handle) {
@@ -594,10 +647,29 @@ class WebtoonDynamicIsland {
       this.scheduleFade();
     }
 
+    // Check for Start / Stop running transitions
+    if (!this.hasInitializedRunning) {
+      this.hasInitializedRunning = true;
+      this.wasRunning = !!state.isRunning;
+    } else if (this.wasRunning !== !!state.isRunning) {
+      const isNowRunning = !!state.isRunning;
+      this.wasRunning = isNowRunning;
+      this.triggerStatusNotification(isNowRunning ? 'START' : 'STOP');
+    }
+
     if (state.isBraking) {
+      if (this.feedbackTimeout) {
+        clearTimeout(this.feedbackTimeout);
+        this.feedbackTimeout = null;
+      }
+      this.statusNotification = null;
       speedDisplay.textContent = 'BRAKE';
       speedDisplay.className = 'speed-display brake';
       if (speedCluster) speedCluster.className = 'speed-cluster brake-mode';
+    } else if (this.statusNotification) {
+      speedDisplay.textContent = this.statusNotification;
+      speedDisplay.className = `speed-display status-${this.statusNotification.toLowerCase()}`;
+      if (speedCluster) speedCluster.className = 'speed-cluster';
     } else {
       const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
       speedDisplay.textContent = formattedSpeed;
@@ -627,6 +699,7 @@ class WebtoonDynamicIsland {
       clearTimeout(this.feedbackTimeout);
       this.feedbackTimeout = null;
     }
+    this.statusNotification = null;
     if (this.host) {
       this.host.remove();
       this.host = null;
