@@ -1,8 +1,8 @@
 /**
  * ScrollToon - Dual Input Controller (Mouse & Trackpad Clutch)
- * Left-Click Hold = Clutch Brake (Hold to slow down/stop, release to resume)
+ * Left-Click Hold = Clutch Brake
  * Middle-Click / Space = Toggle Start/Stop
- * Wheel / Two-finger flick UP = Dynamic engine braking
+ * [ / ] = Speed adjustment with HUD feedback
  */
 class WebtoonClutch {
   constructor(scroller, options = {}) {
@@ -12,6 +12,7 @@ class WebtoonClutch {
       enableMiddleClickToggle: true,
       enableWheelBraking: true,
       enableDoubleTapToggle: true,
+      onSpeedChange: options.onSpeedChange || (() => {}),
       ...options
     };
 
@@ -32,9 +33,8 @@ class WebtoonClutch {
   bindMouseEvents() {
     // 1. LEFT-CLICK HOLD = CLUTCH BRAKE PEDAL
     window.addEventListener('mousedown', (e) => {
-      // Ignore if clicking inside our Dynamic Island
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
-      if (e.button !== 0) return; // Left click only
+      if (e.button !== 0) return;
 
       if (this.options.enableLeftClickBrake && this.scroller.isRunning) {
         this.leftDownTimestamp = performance.now();
@@ -50,14 +50,12 @@ class WebtoonClutch {
         this.isLeftBrakeActive = false;
         this.scroller.applyClutch(false);
 
-        // If held for more than 120ms, it was a brake action -> prevent accidental link/action triggers
         if (performance.now() - this.leftDownTimestamp > 120) {
           this.preventNextClick = true;
         }
       }
     }, { capture: true });
 
-    // Suppress click / drag if it was a brake hold
     window.addEventListener('click', (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
 
@@ -68,17 +66,16 @@ class WebtoonClutch {
       }
     }, { capture: true });
 
-    // Prevent text / image dragging while holding brake
     window.addEventListener('dragstart', (e) => {
       if (this.isLeftBrakeActive) {
         e.preventDefault();
       }
     }, { capture: true });
 
-    // 2. MIDDLE CLICK (Button 1) = TOGGLE PLAY / PAUSE
+    // 2. MIDDLE CLICK = TOGGLE PLAY / PAUSE
     window.addEventListener('auxclick', (e) => {
       if (!this.options.enableMiddleClickToggle) return;
-      if (e.button === 1) { // Middle click
+      if (e.button === 1) {
         e.preventDefault();
         e.stopPropagation();
         this.scroller.toggle();
@@ -91,7 +88,7 @@ class WebtoonClutch {
       }
     }, { capture: true });
 
-    // 3. DOUBLE-CLICK IN GUTTER / MARGIN = TOGGLE PLAY / PAUSE (Trackpad friendly)
+    // 3. DOUBLE-CLICK IN GUTTER = TOGGLE PLAY / PAUSE
     window.addEventListener('click', (e) => {
       if (!this.options.enableDoubleTapToggle) return;
       if (e.target && e.target.closest && e.target.closest('a, button, input, [role="button"], #scrolltoon-host')) return;
@@ -111,21 +108,17 @@ class WebtoonClutch {
       if (!this.options.enableWheelBraking) return;
       if (!this.scroller.isRunning) return;
 
-      // Allow wheel on our island without braking page
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
 
       const deltaY = e.deltaY;
 
       if (deltaY < -75) {
-        // Strong swipe UP -> User looking back at panels -> Hard Pause
         this.scroller.stop();
       } else if (deltaY < -10) {
-        // Gentle scroll UP -> Engine friction
         e.preventDefault();
         const frictionPower = Math.min(1.2, Math.abs(deltaY) / 40);
         this.scroller.applyFriction(frictionPower);
       } else if (deltaY > 30) {
-        // Scroll DOWN -> Acceleration boost
         const boostPower = Math.min(1.5, deltaY / 60);
         this.scroller.applyBoost(boostPower);
       }
@@ -149,20 +142,24 @@ class WebtoonClutch {
         case 'Minus':
           e.preventDefault();
           this.scroller.adjustCruiseSpeed(-0.1);
+          if (this.options.onSpeedChange) this.options.onSpeedChange(-0.1);
           break;
 
         case 'BracketRight':
         case 'Equal':
           e.preventDefault();
           this.scroller.adjustCruiseSpeed(0.1);
+          if (this.options.onSpeedChange) this.options.onSpeedChange(0.1);
           break;
 
         case 'KeyJ':
           this.scroller.adjustCruiseSpeed(0.2);
+          if (this.options.onSpeedChange) this.options.onSpeedChange(0.2);
           break;
 
         case 'KeyK':
           this.scroller.adjustCruiseSpeed(-0.2);
+          if (this.options.onSpeedChange) this.options.onSpeedChange(-0.2);
           break;
 
         case 'Escape':

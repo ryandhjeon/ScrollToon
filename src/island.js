@@ -1,8 +1,8 @@
 /**
- * ScrollToon - Proximity Ghost Dynamic Island UI
+ * ScrollToon - Proximity Ghost Dynamic Island UI with Minimal Speed HUD
  * Renders inside a Shadow DOM for total style isolation.
  * Remains a sleek horizontal control bar that fades to low opacity during cruising,
- * and seamlessly restores full opacity as your cursor approaches.
+ * restores full opacity on cursor proximity, and shows a minimal HUD toast on speed changes.
  */
 class WebtoonDynamicIsland {
   constructor(scroller) {
@@ -10,11 +10,13 @@ class WebtoonDynamicIsland {
     this.isGhosted = false;
     this.proximityThresholdPx = 140; // Cursor distance to wake up full opacity
     this.fadeIdleTimeout = null;
+    this.toastTimeout = null;
     this.isDragging = false;
 
     this.host = null;
     this.shadow = null;
     this.islandEl = null;
+    this.toastEl = null;
 
     this.init();
   }
@@ -66,6 +68,55 @@ class WebtoonDynamicIsland {
         -webkit-user-select: none;
       }
 
+      /* MINIMAL CENTER SPEED HUD TOAST */
+      .speed-toast {
+        position: fixed;
+        top: 36%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.92);
+        background: rgba(16, 20, 26, 0.82);
+        backdrop-filter: blur(24px) saturate(190%);
+        -webkit-backdrop-filter: blur(24px) saturate(190%);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55),
+                    0 0 24px rgba(0, 245, 160, 0.2);
+        border-radius: 9999px;
+        padding: 8px 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #FFFFFF;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 100;
+      }
+
+      .speed-toast.visible {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      .toast-icon {
+        color: #00F5A0;
+        font-size: 14px;
+        line-height: 1;
+      }
+
+      .toast-val {
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: -0.4px;
+        color: #FFFFFF;
+      }
+
+      .toast-arrow {
+        font-size: 12px;
+        font-weight: 700;
+        color: #00F5A0;
+      }
+
+      /* ISLAND WRAPPER */
       .island-wrapper {
         position: fixed;
         bottom: 24px;
@@ -165,6 +216,13 @@ class WebtoonDynamicIsland {
         padding: 3px 8px;
         border-radius: 9999px;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease;
+      }
+
+      .speed-cluster.pulse {
+        transform: scale(1.1);
+        border-color: #00F5A0;
+        box-shadow: 0 0 14px rgba(0, 245, 160, 0.4);
       }
 
       .speed-step-btn {
@@ -275,6 +333,15 @@ class WebtoonDynamicIsland {
   render() {
     this.shadow.innerHTML = `
       <style>${this.getStyles()}</style>
+
+      <!-- Minimal Speed Change HUD Toast -->
+      <div class="speed-toast" id="speedToast">
+        <span class="toast-icon">⚡</span>
+        <span class="toast-val" id="toastVal">1.5x</span>
+        <span class="toast-arrow" id="toastArrow"></span>
+      </div>
+
+      <!-- Main Dynamic Island -->
       <div class="island-wrapper" id="islandWrapper">
         <div class="island-card" id="islandCard">
           
@@ -318,6 +385,7 @@ class WebtoonDynamicIsland {
     `;
 
     this.islandEl = this.shadow.querySelector('#islandWrapper');
+    this.toastEl = this.shadow.querySelector('#speedToast');
   }
 
   bindEvents() {
@@ -338,12 +406,12 @@ class WebtoonDynamicIsland {
     speedDecBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.scroller.adjustCruiseSpeed(-0.1);
-      this.wakeOpacity();
+      this.triggerSpeedFeedback(-0.1);
     });
     speedIncBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.scroller.adjustCruiseSpeed(0.1);
-      this.wakeOpacity();
+      this.triggerSpeedFeedback(0.1);
     });
 
     // Wheel over speed cluster to dial speed
@@ -352,7 +420,7 @@ class WebtoonDynamicIsland {
       e.stopPropagation();
       const delta = e.deltaY < 0 ? 0.1 : -0.1;
       this.scroller.adjustCruiseSpeed(delta);
-      this.wakeOpacity();
+      this.triggerSpeedFeedback(delta);
     }, { passive: false });
 
     // Preset buttons
@@ -360,8 +428,9 @@ class WebtoonDynamicIsland {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const speed = parseFloat(btn.getAttribute('data-speed'));
+        const diff = speed - this.scroller.cruiseSpeed;
         this.scroller.setCruiseSpeed(speed);
-        this.wakeOpacity();
+        this.triggerSpeedFeedback(diff);
       });
     });
 
@@ -379,6 +448,51 @@ class WebtoonDynamicIsland {
         this.scheduleFade();
       }
     });
+  }
+
+  // Shows the minimal HUD toast and pulses the island's speed cluster
+  triggerSpeedFeedback(delta = 0) {
+    this.wakeOpacity();
+
+    // Pulse the island cluster
+    const cluster = this.shadow.querySelector('#speedCluster');
+    if (cluster) {
+      cluster.classList.remove('pulse');
+      void cluster.offsetWidth; // re-flow
+      cluster.classList.add('pulse');
+      setTimeout(() => cluster.classList.remove('pulse'), 300);
+    }
+
+    // Display Toast HUD
+    if (this.toastEl) {
+      const toastVal = this.shadow.querySelector('#toastVal');
+      const toastArrow = this.shadow.querySelector('#toastArrow');
+
+      const speedStr = this.scroller.cruiseSpeed.toFixed(1) + 'x';
+      if (toastVal) toastVal.textContent = speedStr;
+
+      if (toastArrow) {
+        if (delta > 0) {
+          toastArrow.textContent = '▲';
+          toastArrow.style.color = '#00F5A0';
+        } else if (delta < 0) {
+          toastArrow.textContent = '▼';
+          toastArrow.style.color = '#FF9F43';
+        } else {
+          toastArrow.textContent = '';
+        }
+      }
+
+      this.toastEl.classList.add('visible');
+
+      if (this.toastTimeout) {
+        clearTimeout(this.toastTimeout);
+      }
+      this.toastTimeout = setTimeout(() => {
+        this.toastEl.classList.remove('visible');
+        this.toastTimeout = null;
+      }, 750);
+    }
   }
 
   setupDraggable(handle) {
@@ -426,16 +540,13 @@ class WebtoonDynamicIsland {
       if (!this.islandEl || this.isDragging) return;
 
       const rect = this.islandEl.getBoundingClientRect();
-      // Calculate distance between mouse and island box
       const dx = Math.max(rect.left - e.clientX, 0, e.clientX - rect.right);
       const dy = Math.max(rect.top - e.clientY, 0, e.clientY - rect.bottom);
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist < this.proximityThresholdPx) {
-        // Cursor is close -> full opacity
         this.wakeOpacity();
       } else if (this.scroller.isRunning && !this.isGhosted) {
-        // Cursor is far away while running -> schedule ghost fade
         this.scheduleFade();
       }
     }, { passive: true });
@@ -483,7 +594,6 @@ class WebtoonDynamicIsland {
 
     if (!playIcon || !pauseIcon) return;
 
-    // Play/Pause icon
     if (state.isRunning) {
       playIcon.style.display = 'none';
       pauseIcon.style.display = 'block';
@@ -492,14 +602,12 @@ class WebtoonDynamicIsland {
       playIcon.style.display = 'block';
       pauseIcon.style.display = 'none';
       this.clearFadeTimer();
-      this.setGhost(false); // Always full opacity when stopped
+      this.setGhost(false);
     }
 
-    // Speed display
     const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
     speedDisplay.textContent = formattedSpeed;
 
-    // Highlight active preset chip if matches
     presets.forEach(p => {
       if (Math.abs(parseFloat(p.getAttribute('data-speed')) - state.cruiseSpeed) < 0.05) {
         p.classList.add('active');
@@ -508,10 +616,9 @@ class WebtoonDynamicIsland {
       }
     });
 
-    // Brake status
     if (state.isBraking) {
       brakeBadge.classList.add('active');
-      this.setGhost(false); // Instantly brighten when braking
+      this.setGhost(false);
     } else {
       brakeBadge.classList.remove('active');
     }

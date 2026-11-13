@@ -44,12 +44,15 @@
       progress: scroller.getProgress()
     });
 
-    // 5. Initialize Clutch & Gestures (Left-Click brake, Middle-Click toggle)
+    // 5. Initialize Clutch & Gestures (Left-Click brake, Middle-Click toggle, [ ] hotkeys)
     const clutch = new window.ScrollToonClutch(scroller, {
       enableLeftClickBrake: settings.enableLeftClickBrake,
       enableMiddleClickToggle: settings.enableMiddleClickToggle,
       enableWheelBraking: settings.enableWheelBraking,
-      enableDoubleTapToggle: settings.enableDoubleTapToggle
+      enableDoubleTapToggle: settings.enableDoubleTapToggle,
+      onSpeedChange: (delta) => {
+        if (island) island.triggerSpeedFeedback(delta);
+      }
     });
 
     // Save speed preference whenever user adjusts it
@@ -68,7 +71,9 @@
           scroller.toggle();
           sendResponse({ status: scroller.isRunning });
         } else if (msg.action === 'setSpeed') {
+          const diff = msg.speed - scroller.cruiseSpeed;
           scroller.setCruiseSpeed(msg.speed);
+          if (island) island.triggerSpeedFeedback(diff);
           sendResponse({ speed: scroller.cruiseSpeed });
         }
       });
