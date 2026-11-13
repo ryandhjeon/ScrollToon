@@ -101,7 +101,7 @@
     } catch (e) {}
 
     if (scroller) {
-      scroller.stop();
+      scroller.destroy();
       scroller = null;
     }
     if (clutch) {

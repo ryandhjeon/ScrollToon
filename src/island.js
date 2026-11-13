@@ -643,7 +643,8 @@ class WebtoonDynamicIsland {
     const progressFill = this.shadow.querySelector('#progressFill');
     const progressText = this.shadow.querySelector('#progressText');
 
-    const rounded = Math.round(pct);
+    const validPct = (typeof pct === 'number' && !isNaN(pct) && isFinite(pct)) ? pct : 0;
+    const rounded = Math.min(100, Math.max(0, Math.round(validPct)));
     if (progressFill) progressFill.style.width = `${rounded}%`;
     if (progressText) progressText.textContent = `${rounded}%`;
   }

@@ -25,7 +25,12 @@ class WebtoonScroller {
 
     // Active scrolling element
     this.scrollContainer = this.detectScrollContainer();
+    this.onScroll = null;
+    this.onResize = null;
+    this.resizeObserver = null;
+
     this.setupResizeListener();
+    this.setupScrollListener();
   }
 
   detectScrollContainer() {
@@ -49,14 +54,42 @@ class WebtoonScroller {
   }
 
   setupResizeListener() {
-    window.addEventListener('resize', () => {
+    this.onResize = () => {
       this.scrollContainer = this.detectScrollContainer();
-    }, { passive: true });
+      this.onProgressUpdate(this.getProgress());
+    };
+    window.addEventListener('resize', this.onResize, { passive: true });
+
+    // Continuously observe document height mutations as lazy-loaded images load
+    if (typeof ResizeObserver !== 'undefined' && document.documentElement) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.onProgressUpdate(this.getProgress());
+      });
+      this.resizeObserver.observe(document.documentElement);
+    }
+  }
+
+  setupScrollListener() {
+    this.onScroll = () => {
+      // Updates progress in real-time on manual scrolling even when stopped!
+      this.onProgressUpdate(this.getProgress());
+    };
+
+    window.addEventListener('scroll', this.onScroll, { passive: true });
+    document.addEventListener('scroll', this.onScroll, { passive: true });
+    if (this.scrollContainer) {
+      this.scrollContainer.addEventListener('scroll', this.onScroll, { passive: true });
+    }
+
+    // Trigger immediate calculation
+    setTimeout(() => {
+      this.onProgressUpdate(this.getProgress());
+    }, 50);
   }
 
   getScrollTop() {
     if (!this.scrollContainer) {
-      return window.scrollY || window.pageYOffset || document.documentElement.scrollTop || (document.body ? document.body.scrollTop : 0) || 0;
+      return window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0) || (document.body ? document.body.scrollTop : 0) || 0;
     }
     return this.scrollContainer.scrollTop;
   }
@@ -82,9 +115,11 @@ class WebtoonScroller {
 
   getProgress() {
     const max = this.getMaxScroll();
-    if (max <= 5) return 0;
+    if (!max || max <= 5) return 0;
     const current = this.getScrollTop();
-    return Math.min(100, Math.max(0, (current / max) * 100));
+    const pct = (current / max) * 100;
+    if (isNaN(pct) || !isFinite(pct)) return 0;
+    return Math.min(100, Math.max(0, pct));
   }
 
   start() {
@@ -191,6 +226,24 @@ class WebtoonScroller {
 
     this.onProgressUpdate(this.getProgress());
     this.animationFrameId = requestAnimationFrame((t) => this.loop(t));
+  }
+
+  destroy() {
+    this.stop();
+    if (this.onScroll) {
+      window.removeEventListener('scroll', this.onScroll);
+      document.removeEventListener('scroll', this.onScroll);
+      if (this.scrollContainer) {
+        this.scrollContainer.removeEventListener('scroll', this.onScroll);
+      }
+    }
+    if (this.onResize) {
+      window.removeEventListener('resize', this.onResize);
+    }
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
   }
 }
 
