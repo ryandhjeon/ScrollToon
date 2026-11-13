@@ -1,9 +1,8 @@
 /**
  * ScrollToon - Dual Input Controller
  * Left-Click Hold = Hard Brake (Freezes screen)
- * Two-Finger Hold on Trackpad = Slow Down (Cushioned glide down at ~35% speed)
- * Releasing = Immediately and naturally glides back to normal cruising speed
- * Fast scroll-up is NEVER hijacked.
+ * Two-Finger Hold = Slow Down (Cushioned glide down at ~35% speed)
+ * Scrolling UP is 100% unrestricted: downward auto-scroll yields while user scrolls up!
  */
 class WebtoonClutch {
   constructor(scroller, options = {}) {
@@ -20,6 +19,7 @@ class WebtoonClutch {
     this.isLeftBrakeActive = false;
     this.isTwoFingerSlowActive = false;
     this.twoFingerTouchTimer = null;
+    this.scrollUpSuspendTimer = null;
     this.leftDownTimestamp = 0;
     this.preventNextClick = false;
     this.preventNextContextMenu = false;
@@ -85,7 +85,6 @@ class WebtoonClutch {
     window.addEventListener('pointercancel', onUp, { capture: true });
     window.addEventListener('blur', onUp, { capture: true });
 
-    // Suppress context menu on two-finger click/hold
     window.addEventListener('contextmenu', (e) => {
       if (this.isTwoFingerSlowActive || this.preventNextContextMenu) {
         e.preventDefault();
@@ -141,47 +140,52 @@ class WebtoonClutch {
     });
   }
 
-  // TWO-FINGER TRACKPAD TOUCH & HOLD DETECTION
+  // TRACKPAD TWO-FINGER SCROLL & TOUCH
   bindTrackpadTouchEvents() {
     const handleTrackpadWheel = (e) => {
-      if (!this.options.enableTwoFingerSlow) return;
       if (!this.scroller.isRunning) return;
-
-      // Allow wheel over our island
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
 
       const deltaY = e.deltaY;
 
-      // If user is intentionally scrolling UP fast to inspect earlier panels, DO NOT hijack!
-      if (deltaY < -45) {
+      // 1. SCROLLING UP: NEVER preventDefault! Allow native scroll up freely!
+      if (deltaY < -1.5) {
+        // Suspend downward auto-scroll while user is scrolling up so we don't fight them!
+        this.scroller.suspendForScrollUp(true);
+
+        if (this.scrollUpSuspendTimer) {
+          clearTimeout(this.scrollUpSuspendTimer);
+        }
+
+        // 450ms after user stops scrolling up, softly resume downward auto-scroll
+        this.scrollUpSuspendTimer = setTimeout(() => {
+          this.scroller.suspendForScrollUp(false);
+          this.scrollUpSuspendTimer = null;
+        }, 450);
         return;
       }
 
-      // When two fingers are placed and held on the trackpad surface:
-      // Trackpad sends gentle low-delta events (micro-movements/friction)
-      if (Math.abs(deltaY) >= 0.2 && Math.abs(deltaY) < 35) {
-        e.preventDefault();
-
-        // Engage slow-glide
+      // 2. TWO-FINGER RESTING / SLOW HOLD ON TRACKPAD:
+      // When holding two fingers to slow down (tiny micro-touch or forward friction)
+      if (this.options.enableTwoFingerSlow && Math.abs(deltaY) >= 0.2 && deltaY < 20) {
         this.scroller.setSlowDown(true);
 
         if (this.twoFingerTouchTimer) {
           clearTimeout(this.twoFingerTouchTimer);
         }
 
-        // As soon as fingers lift off the glass surface (250ms of silence),
-        // smoothly and naturally accelerate back to normal cruising speed!
+        // When fingers lift, smoothly accelerate back to full cruising speed
         this.twoFingerTouchTimer = setTimeout(() => {
           if (!this.isTwoFingerSlowActive) {
             this.scroller.setSlowDown(false);
           }
           this.twoFingerTouchTimer = null;
-        }, 250);
+        }, 260);
       }
     };
 
-    window.addEventListener('wheel', handleTrackpadWheel, { capture: true, passive: false });
-    document.addEventListener('wheel', handleTrackpadWheel, { capture: true, passive: false });
+    window.addEventListener('wheel', handleTrackpadWheel, { capture: true, passive: true });
+    document.addEventListener('wheel', handleTrackpadWheel, { capture: true, passive: true });
   }
 
   bindKeyboardEvents() {

@@ -1,7 +1,7 @@
 /**
  * ScrollToon - 120Hz Sub-pixel Physics Scroll Engine
  * Butter-smooth Apple-grade exponential spring physics.
- * Releasing returns to normal cruising speed with zero jarring transitions.
+ * Suspends downward motion while user is scrolling up so it never fights the user!
  */
 class WebtoonScroller {
   constructor(options = {}) {
@@ -12,8 +12,9 @@ class WebtoonScroller {
     this.isRunning = false;
 
     // States
-    this.isBraking = false;     // Left-Click hold = Complete freeze
-    this.isSlowedDown = false; // Two-finger hold = Gentle slow-glide (~35% speed)
+    this.isBraking = false;               // Left-Click hold = Complete freeze
+    this.isSlowedDown = false;           // Two-finger hold = Gentle slow-glide (~35% speed)
+    this.isSuspendedForScrollUp = false; // Yield to user when scrolling up
 
     // Sub-pixel accumulator
     this.subPixelRemainder = 0;
@@ -93,6 +94,7 @@ class WebtoonScroller {
     this.isRunning = true;
     this.isBraking = false;
     this.isSlowedDown = false;
+    this.isSuspendedForScrollUp = false;
     this.targetSpeed = this.cruiseSpeed;
     this.lastTimestamp = performance.now();
     this.loop(this.lastTimestamp);
@@ -104,6 +106,7 @@ class WebtoonScroller {
     this.isRunning = false;
     this.isBraking = false;
     this.isSlowedDown = false;
+    this.isSuspendedForScrollUp = false;
     this.targetSpeed = 0;
     this.currentSpeed = 0;
     this.subPixelRemainder = 0;
@@ -154,11 +157,15 @@ class WebtoonScroller {
     this.notifyState();
   }
 
+  // 3. Temporarily suspend downward motor while user scrolls UP manually
+  suspendForScrollUp(suspended) {
+    this.isSuspendedForScrollUp = suspended;
+  }
+
   recalculateTargetSpeed() {
     if (this.isBraking) {
       this.targetSpeed = 0;
     } else if (this.isSlowedDown) {
-      // Gentle reading crawl: ~35% of cruising speed (minimum 0.35x)
       this.targetSpeed = Math.max(0.35, Math.round(this.cruiseSpeed * 0.35 * 10) / 10);
     } else {
       this.targetSpeed = this.cruiseSpeed;
@@ -183,16 +190,19 @@ class WebtoonScroller {
     this.lastTimestamp = now;
     const dtSeconds = dt / 1000;
 
-    // Organic Apple-grade exponential spring physics:
-    // Decelerating into slow/brake: lambda = 4.8 (smooth cushioned deceleration in ~350ms)
-    // Accelerating back to cruise: lambda = 3.8 (soft, natural momentum buildup in ~400ms)
+    // If user is actively scrolling UP, don't inject downward pixels
+    if (this.isSuspendedForScrollUp) {
+      this.animationFrameId = requestAnimationFrame((t) => this.loop(t));
+      return;
+    }
+
+    // Organic Apple-grade exponential spring physics
     const isDecelerating = this.targetSpeed < this.currentSpeed;
     const lambda = isDecelerating ? 4.8 : 3.8;
     const decay = Math.exp(-lambda * dtSeconds);
 
     this.currentSpeed = this.targetSpeed + (this.currentSpeed - this.targetSpeed) * decay;
 
-    // Smooth clamp near target
     if (Math.abs(this.currentSpeed - this.targetSpeed) < 0.015) {
       this.currentSpeed = this.targetSpeed;
     }
