@@ -1,14 +1,12 @@
 /**
  * ScrollToon - Proximity Ghost Dynamic Island UI with Minimal Speed HUD
- * Renders inside a Shadow DOM for total style isolation.
- * Remains a sleek horizontal control bar that fades to low opacity during cruising,
- * restores full opacity on cursor proximity, and shows a minimal HUD toast on speed changes.
+ * Sleek, compact pill: Play/Pause, - Speed +, Reading Progress, Brake Badge.
  */
 class WebtoonDynamicIsland {
   constructor(scroller) {
     this.scroller = scroller;
     this.isGhosted = false;
-    this.proximityThresholdPx = 140; // Cursor distance to wake up full opacity
+    this.proximityThresholdPx = 140;
     this.fadeIdleTimeout = null;
     this.toastTimeout = null;
     this.isDragging = false;
@@ -116,7 +114,7 @@ class WebtoonDynamicIsland {
         color: #00F5A0;
       }
 
-      /* ISLAND WRAPPER */
+      /* COMPACT ISLAND WRAPPER */
       .island-wrapper {
         position: fixed;
         bottom: 24px;
@@ -128,17 +126,15 @@ class WebtoonDynamicIsland {
                     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
-      /* Ghost mode: fades down while reading hands-free */
       .island-wrapper.ghost {
         opacity: 0.16;
       }
 
-      /* Direct hover always forces 100% clarity */
       .island-wrapper:hover {
         opacity: 1 !important;
       }
 
-      /* Frosted Glass Pill */
+      /* Frosted Glass Shell */
       .island-card {
         background: rgba(16, 20, 26, 0.78);
         backdrop-filter: blur(24px) saturate(190%);
@@ -173,7 +169,7 @@ class WebtoonDynamicIsland {
         cursor: grab;
         opacity: 0.4;
         transition: opacity 0.15s;
-        padding: 0 3px;
+        padding: 0 2px;
       }
       .drag-handle:hover { opacity: 0.9; }
       .drag-handle:active { cursor: grabbing; }
@@ -255,36 +251,9 @@ class WebtoonDynamicIsland {
         cursor: ns-resize;
       }
 
-      /* Quick Presets */
-      .presets {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-      .preset-chip {
-        font-size: 11px;
-        font-weight: 600;
-        padding: 3px 8px;
-        border-radius: 9999px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.05);
-        color: rgba(255, 255, 255, 0.7);
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
-      .preset-chip:hover {
-        background: rgba(255, 255, 255, 0.18);
-        color: #FFF;
-      }
-      .preset-chip.active {
-        background: rgba(0, 245, 160, 0.2);
-        border-color: rgba(0, 245, 160, 0.55);
-        color: #00F5A0;
-      }
-
       /* Progress Bar & Reading Stats */
       .reading-progress-bar {
-        width: 60px;
+        width: 64px;
         height: 4px;
         background: rgba(255, 255, 255, 0.15);
         border-radius: 2px;
@@ -367,13 +336,6 @@ class WebtoonDynamicIsland {
             <button class="speed-step-btn" id="speedIncBtn">+</button>
           </div>
 
-          <div class="presets">
-            <button class="preset-chip" data-speed="1.0">1.0x</button>
-            <button class="preset-chip active" data-speed="1.5">1.5x</button>
-            <button class="preset-chip" data-speed="2.0">2.0x</button>
-            <button class="preset-chip" data-speed="3.0">3.0x</button>
-          </div>
-
           <div class="reading-progress-bar">
             <div class="progress-fill" id="progressFill"></div>
           </div>
@@ -393,7 +355,6 @@ class WebtoonDynamicIsland {
     const speedDecBtn = this.shadow.querySelector('#speedDecBtn');
     const speedIncBtn = this.shadow.querySelector('#speedIncBtn');
     const speedCluster = this.shadow.querySelector('#speedCluster');
-    const presets = this.shadow.querySelectorAll('.preset-chip');
     const dragHandle = this.shadow.querySelector('#dragHandle');
 
     // Play/Pause
@@ -423,17 +384,6 @@ class WebtoonDynamicIsland {
       this.triggerSpeedFeedback(delta);
     }, { passive: false });
 
-    // Preset buttons
-    presets.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const speed = parseFloat(btn.getAttribute('data-speed'));
-        const diff = speed - this.scroller.cruiseSpeed;
-        this.scroller.setCruiseSpeed(speed);
-        this.triggerSpeedFeedback(diff);
-      });
-    });
-
     // Dragging
     this.setupDraggable(dragHandle);
 
@@ -454,16 +404,14 @@ class WebtoonDynamicIsland {
   triggerSpeedFeedback(delta = 0) {
     this.wakeOpacity();
 
-    // Pulse the island cluster
     const cluster = this.shadow.querySelector('#speedCluster');
     if (cluster) {
       cluster.classList.remove('pulse');
-      void cluster.offsetWidth; // re-flow
+      void cluster.offsetWidth;
       cluster.classList.add('pulse');
       setTimeout(() => cluster.classList.remove('pulse'), 300);
     }
 
-    // Display Toast HUD
     if (this.toastEl) {
       const toastVal = this.shadow.querySelector('#toastVal');
       const toastArrow = this.shadow.querySelector('#toastArrow');
@@ -534,7 +482,6 @@ class WebtoonDynamicIsland {
     handle.addEventListener('mousedown', onMouseDown);
   }
 
-  // Watches cursor distance to the island
   setupProximityWatcher() {
     window.addEventListener('mousemove', (e) => {
       if (!this.islandEl || this.isDragging) return;
@@ -590,7 +537,6 @@ class WebtoonDynamicIsland {
     const pauseIcon = this.shadow.querySelector('#pauseIcon');
     const speedDisplay = this.shadow.querySelector('#speedDisplay');
     const brakeBadge = this.shadow.querySelector('#brakeBadge');
-    const presets = this.shadow.querySelectorAll('.preset-chip');
 
     if (!playIcon || !pauseIcon) return;
 
@@ -607,14 +553,6 @@ class WebtoonDynamicIsland {
 
     const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
     speedDisplay.textContent = formattedSpeed;
-
-    presets.forEach(p => {
-      if (Math.abs(parseFloat(p.getAttribute('data-speed')) - state.cruiseSpeed) < 0.05) {
-        p.classList.add('active');
-      } else {
-        p.classList.remove('active');
-      }
-    });
 
     if (state.isBraking) {
       brakeBadge.classList.add('active');
