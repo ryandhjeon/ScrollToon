@@ -1,12 +1,14 @@
 /**
  * ScrollToon - Main Content Script
  * Manual Activation Architecture:
- * - Completely dormant by default (never pops up on uninvited websites).
+ * - Completely dormant by default (never pops up uninvited on any webpage).
  * - Turned on manually via Option+S (Alt+S) or the Chrome Extension popup.
  * - Stays active across chapter navigations within the same tab via sessionStorage.
  */
 (function() {
-  if (window.__SCROLLTOON_INITIALIZED__) return;
+  if (window.__SCROLLTOON_INITIALIZED__) {
+    return;
+  }
   window.__SCROLLTOON_INITIALIZED__ = true;
 
   const defaultSettings = {
@@ -33,52 +35,62 @@
     } catch (e) {}
 
     // 1. Initialize proactive preloader
-    preloader = new window.ScrollToonPreloader();
+    if (window.ScrollToonPreloader) {
+      preloader = new window.ScrollToonPreloader();
+    }
 
     // 2. Create Scroller Engine
-    scroller = new window.ScrollToonScroller({
-      defaultSpeed: currentSettings.defaultSpeed,
-      onStateChange: (state) => {
-        if (island) island.updateState(state);
-      },
-      onProgressUpdate: (progress) => {
-        if (island) island.updateProgress(progress);
-      }
-    });
+    if (window.ScrollToonScroller) {
+      scroller = new window.ScrollToonScroller({
+        defaultSpeed: currentSettings.defaultSpeed,
+        onStateChange: (state) => {
+          if (island) island.updateState(state);
+        },
+        onProgressUpdate: (progress) => {
+          if (island) island.updateProgress(progress);
+        }
+      });
+    }
 
     // 3. Create Dynamic Island UI
-    island = new window.ScrollToonIsland(scroller, {
-      initialPosition: currentSettings.islandPosition
-    });
+    if (window.ScrollToonIsland && scroller) {
+      island = new window.ScrollToonIsland(scroller, {
+        initialPosition: currentSettings.islandPosition
+      });
 
-    // Initial state push
-    island.updateState({
-      isRunning: false,
-      isBraking: false,
-      cruiseSpeed: scroller.cruiseSpeed,
-      currentSpeed: 0,
-      progress: scroller.getProgress()
-    });
+      // Initial state push
+      island.updateState({
+        isRunning: false,
+        isBraking: false,
+        cruiseSpeed: scroller.cruiseSpeed,
+        currentSpeed: 0,
+        progress: scroller.getProgress()
+      });
+    }
 
     // 4. Initialize Controls (Left-Click hold = Brake, [ / ] = Speed adjustment)
-    clutch = new window.ScrollToonClutch(scroller, {
-      enableLeftClickBrake: currentSettings.enableLeftClickBrake,
-      enableMiddleClickToggle: currentSettings.enableMiddleClickToggle,
-      enableDoubleTapToggle: currentSettings.enableDoubleTapToggle,
-      onSpeedChange: (delta) => {
-        if (island) island.triggerSpeedFeedback(delta);
-      }
-    });
+    if (window.ScrollToonClutch && scroller) {
+      clutch = new window.ScrollToonClutch(scroller, {
+        enableLeftClickBrake: currentSettings.enableLeftClickBrake,
+        enableMiddleClickToggle: currentSettings.enableMiddleClickToggle,
+        enableDoubleTapToggle: currentSettings.enableDoubleTapToggle,
+        onSpeedChange: (delta) => {
+          if (island) island.triggerSpeedFeedback(delta);
+        }
+      });
+    }
 
     // Save speed preference whenever user adjusts it
-    const originalSetCruiseSpeed = scroller.setCruiseSpeed.bind(scroller);
-    scroller.setCruiseSpeed = function(newSpeed) {
-      originalSetCruiseSpeed(newSpeed);
-      currentSettings.defaultSpeed = scroller.cruiseSpeed;
-      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
-        chrome.storage.sync.set({ defaultSpeed: scroller.cruiseSpeed });
-      }
-    };
+    if (scroller) {
+      const originalSetCruiseSpeed = scroller.setCruiseSpeed.bind(scroller);
+      scroller.setCruiseSpeed = function(newSpeed) {
+        originalSetCruiseSpeed(newSpeed);
+        currentSettings.defaultSpeed = scroller.cruiseSpeed;
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+          chrome.storage.sync.set({ defaultSpeed: scroller.cruiseSpeed });
+        }
+      };
+    }
   }
 
   function unmount() {
@@ -133,30 +145,19 @@
       if (msg.action === 'toggleActive') {
         const active = toggleTool();
         sendResponse({ isMounted: active });
+      } else if (msg.action === 'setActive') {
+        if (msg.enable) {
+          mount();
+        } else {
+          unmount();
+        }
+        sendResponse({ isMounted: isMounted });
       } else if (msg.action === 'getTabStatus') {
         sendResponse({
           isMounted,
           isRunning: scroller ? scroller.isRunning : false,
           speed: scroller ? scroller.cruiseSpeed : (currentSettings.defaultSpeed || 1.5)
         });
-      } else if (msg.action === 'toggleScroll') {
-        if (!isMounted) {
-          mount();
-        }
-        if (scroller) {
-          scroller.toggle();
-          sendResponse({ status: scroller.isRunning });
-        } else {
-          sendResponse({ status: false });
-        }
-      } else if (msg.action === 'setSpeed') {
-        currentSettings.defaultSpeed = msg.speed;
-        if (scroller) {
-          const diff = msg.speed - scroller.cruiseSpeed;
-          scroller.setCruiseSpeed(msg.speed);
-          if (island) island.triggerSpeedFeedback(diff);
-          sendResponse({ speed: scroller.cruiseSpeed });
-        }
       } else if (msg.action === 'resetPosition') {
         if (island) island.resetPosition();
         sendResponse({ status: 'ok' });
@@ -168,7 +169,6 @@
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
     chrome.storage.sync.get(defaultSettings, (stored) => {
       currentSettings = { ...defaultSettings, ...(stored || {}) };
-      // Check if user previously activated ScrollToon for this tab's reading session
       let wasActiveInTab = false;
       try {
         wasActiveInTab = sessionStorage.getItem('scrolltoon_tab_active') === 'true';

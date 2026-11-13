@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "description": "Butter-smooth 120Hz autoscroller with Dynamic Island UI, clutch braking, and lazy-load acceleration for webtoons and manga.",
   "permissions": [
-    "storage"
+    "storage",
+    "activeTab",
+    "scripting"
   ],
   "action": {
     "default_popup": "popup/popup.html",
@@ -22,16 +24,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.webtoons.com/*",
-        "https://comic.naver.com/*",
-        "https://tapas.io/*",
-        "https://www.lezhinus.com/*",
-        "https://mangadex.org/*",
-        "https://asuracomic.net/*",
-        "https://asurascans.com/*",
-        "https://reaperscans.com/*",
-        "http://*/*",
-        "https://*/*"
+        "<all_urls>"
       ],
       "js": [
         "src/preloader.js",
