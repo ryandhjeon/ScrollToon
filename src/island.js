@@ -85,15 +85,11 @@ class WebtoonDynamicIsland {
         align-items: center;
       }
 
-      /* Frosted Glass Shell (Borderless) */
+      /* Flat Shell (No blur filter to keep comic art crystal clear) */
       .island-card {
-        background: rgba(16, 20, 26, 0.82);
-        backdrop-filter: blur(24px) saturate(190%);
-        -webkit-backdrop-filter: blur(24px) saturate(190%);
+        background: rgba(16, 20, 26, 0.92);
         border: none;
-        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), 
-                    0 2px 10px rgba(0, 0, 0, 0.35),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
         border-radius: 9999px;
         color: #FFFFFF;
         display: flex;
@@ -102,16 +98,14 @@ class WebtoonDynamicIsland {
         padding: 6px 14px;
         height: 48px;
         cursor: default;
-        transition: background 0.3s ease,
+        transition: background 0.25s ease,
                     opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
                     box-shadow 0.2s ease;
       }
 
-      /* Ghost mode: Dim surrounding elements, but keep center text independent */
+      /* Ghost mode: Pure low opacity with ZERO background blur */
       .island-card.ghost {
-        background: rgba(16, 20, 26, 0.22);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
+        background: rgba(0, 0, 0, 0.12);
         box-shadow: none;
       }
 
