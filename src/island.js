@@ -1,7 +1,7 @@
 /**
- * ScrollToon - Proximity Ghost Dynamic Island UI with Minimal Speed HUD
- * Compact pill: Play/Pause, [ - SPEED/SLOW/BRAKE + ], Reading Progress.
- * Unifies status directly inside the central speed display.
+ * ScrollToon - Ultra-Minimal Proximity Ghost Dynamic Island UI
+ * Zero popups in the middle of the screen.
+ * All speed change feedback is subtly and elegantly reflected right on the speed component.
  */
 class WebtoonDynamicIsland {
   constructor(scroller) {
@@ -9,13 +9,11 @@ class WebtoonDynamicIsland {
     this.isGhosted = false;
     this.proximityThresholdPx = 140;
     this.fadeIdleTimeout = null;
-    this.toastTimeout = null;
     this.isDragging = false;
 
     this.host = null;
     this.shadow = null;
     this.islandEl = null;
-    this.toastEl = null;
 
     this.init();
   }
@@ -65,54 +63,6 @@ class WebtoonDynamicIsland {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         user-select: none;
         -webkit-user-select: none;
-      }
-
-      /* MINIMAL CENTER SPEED HUD TOAST */
-      .speed-toast {
-        position: fixed;
-        top: 36%;
-        left: 50%;
-        transform: translate(-50%, -50%) scale(0.92);
-        background: rgba(16, 20, 26, 0.82);
-        backdrop-filter: blur(24px) saturate(190%);
-        -webkit-backdrop-filter: blur(24px) saturate(190%);
-        border: 1px solid rgba(255, 255, 255, 0.22);
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55),
-                    0 0 24px rgba(0, 245, 160, 0.2);
-        border-radius: 9999px;
-        padding: 8px 18px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: #FFFFFF;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-        z-index: 100;
-      }
-
-      .speed-toast.visible {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-      }
-
-      .toast-icon {
-        color: #00F5A0;
-        font-size: 14px;
-        line-height: 1;
-      }
-
-      .toast-val {
-        font-size: 16px;
-        font-weight: 800;
-        letter-spacing: -0.4px;
-        color: #FFFFFF;
-      }
-
-      .toast-arrow {
-        font-size: 12px;
-        font-weight: 700;
-        color: #00F5A0;
       }
 
       /* COMPACT ISLAND WRAPPER */
@@ -213,13 +163,17 @@ class WebtoonDynamicIsland {
         padding: 3px 8px;
         border-radius: 9999px;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease, box-shadow 0.15s ease;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
       }
 
-      .speed-cluster.pulse {
-        transform: scale(1.1);
+      /* Minimal Speed Up / Down Color Accents */
+      .speed-cluster.speed-up {
         border-color: #00F5A0;
-        box-shadow: 0 0 14px rgba(0, 245, 160, 0.4);
+        box-shadow: 0 0 14px rgba(0, 245, 160, 0.5);
+      }
+      .speed-cluster.speed-down {
+        border-color: #FF9F43;
+        box-shadow: 0 0 14px rgba(255, 159, 67, 0.5);
       }
 
       .speed-cluster.slow-mode {
@@ -263,7 +217,14 @@ class WebtoonDynamicIsland {
         min-width: 44px;
         text-align: center;
         cursor: ns-resize;
-        transition: color 0.18s ease, transform 0.15s ease;
+        transition: color 0.2s ease;
+      }
+
+      .speed-display.speed-up {
+        color: #2affb0;
+      }
+      .speed-display.speed-down {
+        color: #FFB067;
       }
 
       .speed-display.slow {
@@ -318,14 +279,7 @@ class WebtoonDynamicIsland {
     this.shadow.innerHTML = `
       <style>${this.getStyles()}</style>
 
-      <!-- Minimal Speed Change HUD Toast -->
-      <div class="speed-toast" id="speedToast">
-        <span class="toast-icon">⚡</span>
-        <span class="toast-val" id="toastVal">1.5x</span>
-        <span class="toast-arrow" id="toastArrow"></span>
-      </div>
-
-      <!-- Main Dynamic Island -->
+      <!-- Main Dynamic Island (Zero popups in the middle of the screen) -->
       <div class="island-wrapper" id="islandWrapper">
         <div class="island-card" id="islandCard">
           
@@ -345,7 +299,7 @@ class WebtoonDynamicIsland {
             <svg id="pauseIcon" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
 
-          <!-- Speed & State Cluster (Shows 1.5x / SLOW / BRAKE) -->
+          <!-- Speed & State Cluster (Shows 1.5x / SLOW / BRAKE with subtle color accents) -->
           <div class="speed-cluster" id="speedCluster" title="Hover & scroll wheel to adjust speed">
             <button class="speed-step-btn" id="speedDecBtn">-</button>
             <span class="speed-display" id="speedDisplay">1.5x</span>
@@ -361,7 +315,6 @@ class WebtoonDynamicIsland {
     `;
 
     this.islandEl = this.shadow.querySelector('#islandWrapper');
-    this.toastEl = this.shadow.querySelector('#speedToast');
   }
 
   bindEvents() {
@@ -414,46 +367,29 @@ class WebtoonDynamicIsland {
     });
   }
 
+  // Purely minimalistic color pulse directly on the speed component
   triggerSpeedFeedback(delta = 0) {
     this.wakeOpacity();
 
     const cluster = this.shadow.querySelector('#speedCluster');
-    if (cluster) {
-      cluster.classList.remove('pulse');
-      void cluster.offsetWidth;
-      cluster.classList.add('pulse');
-      setTimeout(() => cluster.classList.remove('pulse'), 300);
+    const display = this.shadow.querySelector('#speedDisplay');
+    if (!cluster || !display) return;
+
+    cluster.classList.remove('speed-up', 'speed-down');
+    display.classList.remove('speed-up', 'speed-down');
+
+    if (delta > 0) {
+      cluster.classList.add('speed-up');
+      display.classList.add('speed-up');
+    } else if (delta < 0) {
+      cluster.classList.add('speed-down');
+      display.classList.add('speed-down');
     }
 
-    if (this.toastEl) {
-      const toastVal = this.shadow.querySelector('#toastVal');
-      const toastArrow = this.shadow.querySelector('#toastArrow');
-
-      const speedStr = this.scroller.cruiseSpeed.toFixed(1) + 'x';
-      if (toastVal) toastVal.textContent = speedStr;
-
-      if (toastArrow) {
-        if (delta > 0) {
-          toastArrow.textContent = '▲';
-          toastArrow.style.color = '#00F5A0';
-        } else if (delta < 0) {
-          toastArrow.textContent = '▼';
-          toastArrow.style.color = '#FF9F43';
-        } else {
-          toastArrow.textContent = '';
-        }
-      }
-
-      this.toastEl.classList.add('visible');
-
-      if (this.toastTimeout) {
-        clearTimeout(this.toastTimeout);
-      }
-      this.toastTimeout = setTimeout(() => {
-        this.toastEl.classList.remove('visible');
-        this.toastTimeout = null;
-      }, 750);
-    }
+    setTimeout(() => {
+      cluster.classList.remove('speed-up', 'speed-down');
+      display.classList.remove('speed-up', 'speed-down');
+    }, 400);
   }
 
   setupDraggable(handle) {
@@ -564,7 +500,6 @@ class WebtoonDynamicIsland {
       this.setGhost(false);
     }
 
-    // Unify State right inside the speed display!
     if (state.isBraking) {
       speedDisplay.textContent = 'BRAKE';
       speedDisplay.className = 'speed-display brake';
