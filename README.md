@@ -1,39 +1,31 @@
 # ScrollToon
 
-ScrollToon is a Chrome Extension designed for high-refresh-rate vertical comic reading.
+ScrollToon is a Chrome extension that scrolls webtoons and manga for you.
 
 ---
 
-## Objective
+## Why ScrollToon?
 
-Reading long-format webtoons causes physical hand fatigue from repetitive manual scrolling. Standard browser autoscrollers often cause screen jitter, block dialogue panels with bulky user interfaces, and interrupt native trackpad gestures.
+Reading long webtoon chapters tires your fingers from constant scrolling. Most autoscrollers stutter, cover the art with big toolbars, or break your trackpad gestures.
 
-The objective of ScrollToon is to provide a fluid, hands-free reading experience while maintaining complete tactile control.
-
-### User Value
-- **Eliminate Hand Fatigue:** Scroll long chapters automatically at customized speeds.
-- **Crystal-Clear Reading:** View comic artwork through an ultra-low opacity interface without background blur.
-- **Instant Reading Pauses:** Hold the left mouse button to freeze the screen immediately for dialogue inspection.
-- **Continuous Reading Flow:** Preload comic images 3500 pixels ahead to prevent blank loading spaces.
-- **Preserve Native Gestures:** Use your trackpad normally without gesture conflicts.
+ScrollToon gives you a smooth, hands-free reading experience. You get steady scrolling, clear art, and instant control whenever you want to pause.
 
 ---
 
-## Features
+## What You Get
 
-- **120Hz Sub-Pixel Engine:** Uses physics easing to scroll smoothly without screen jitter.
-- **Ultra-Low Opacity HUD:** Fades to 4% opacity during reading. Does not blur comic artwork.
-- **Left-Click Clutch Brake:** Hold the left mouse button to freeze the screen. Release to resume scrolling.
-- **Proactive Image Preloader:** Preloads images 3500 pixels ahead to eliminate blank loading boxes.
-- **Configurable Speed Steps:** Change speed increment per key press in the extension popup.
-- **Native Trackpad Support:** Keep trackpad scrolling fully native without gesture interference.
-- **Shadow DOM Isolation:** Isolates styles to prevent conflicts with website code.
+- **Hands-Free Scrolling:** Read comfortably without continuous swiping or trackpad strain.
+- **Hold to Pause (Clutch Brake):** Hold the left mouse button to freeze the screen on dialogue or art. Release to continue scrolling.
+- **Clear Comic Art:** The control bar fades to near-transparent while you read. It never blurs the panels.
+- **No Blank Loading Boxes:** Images preload 3500 pixels ahead so you never wait for pictures to load.
+- **Normal Trackpad Use:** Scroll up or down with your trackpad anytime without turning off the tool.
+- **Custom Speed Steps:** Choose how much your speed changes when you press <kbd>[</kbd> or <kbd>]</kbd>.
 
 ---
 
-## Installation
+## How to Install
 
-Do these steps to install the extension in Google Chrome, Brave, Arc, or Edge:
+Follow these steps to add ScrollToon to your browser:
 
 1. Open `chrome://extensions` in your browser.
 2. Turn on **Developer mode** in the top-right corner.
@@ -43,70 +35,32 @@ Do these steps to install the extension in Google Chrome, Brave, Arc, or Edge:
    /Users/ryan/git/webtoon-scroller
    ```
 5. Open any webtoon chapter.
-6. Press <kbd>Option</kbd> + <kbd>S</kbd> (<kbd>Alt</kbd> + <kbd>S</kbd>) to start the tool.
+6. Press <kbd>Option</kbd> + <kbd>S</kbd> (<kbd>Alt</kbd> + <kbd>S</kbd>) to start reading.
 
 ---
 
-## Controls and Shortcuts
+## Quick Shortcuts
 
-| Action | Mouse | Trackpad | Keyboard |
-| :--- | :--- | :--- | :--- |
-| **Start / Stop Tool** | Click popup switch | - | <kbd>Option</kbd> + <kbd>S</kbd> (<kbd>Alt</kbd> + <kbd>S</kbd>) |
-| **Play / Pause Scroll** | Click middle button | Double-click margin | <kbd>Space</kbd> |
-| **Hold Brake** | Hold left button | Click and hold | - |
-| **Adjust Speed** | Turn scroll wheel over HUD | Scroll over HUD | <kbd>[</kbd> / <kbd>]</kbd> |
-| **Emergency Stop** | - | - | <kbd>Esc</kbd> |
-| **Move HUD** | Drag handle icon | Drag handle icon | - |
-| **Reset HUD Position** | Click Reset in popup | Double-click handle | - |
-
----
-
-## Project Structure
-
-```
-webtoon-scroller/
-├── manifest.json        # Chrome Manifest V3 configuration
-├── CHANGELOG.md         # Release history and version status
-├── icons/               # Extension icons
-├── src/
-│   ├── preloader.js     # 3500px proactive image preloader
-│   ├── scroller.js      # Sub-pixel physics scroll engine
-│   ├── clutch.js        # Mouse and keyboard input handler
-│   ├── island.js        # Shadow DOM Dynamic Island HUD
-│   └── content.js       # Main controller and settings listener
-└── popup/
-    ├── popup.html       # Settings panel with step-size slider
-    ├── popup.css        # Minimal dark interface styles
-    └── popup.js         # Settings synchronization
-```
-
----
-
-## Version Status
-
-See [CHANGELOG.md](file:///Users/ryan/git/webtoon-scroller/CHANGELOG.md) for detailed release logs.
-
-| Version | Status | Date | Summary |
-| :--- | :--- | :--- | :--- |
-| **v1.2.0** | Active | 2026-11-13 | Configurable step size, organic SVG morph, calm breathing animation |
-| **v1.1.0** | Shipped | 2026-11-13 | Zero-blur glass, center feedback, manual toggle, reset button |
-| **v1.0.0** | Initial | 2026-11-13 | 120Hz sub-pixel engine, predictive preloader, clutch brake |
+| Action | How to Do It |
+| :--- | :--- |
+| **Turn On / Off** | Press <kbd>Option</kbd> + <kbd>S</kbd> (<kbd>Alt</kbd> + <kbd>S</kbd>) or click the popup switch |
+| **Pause / Resume** | Press <kbd>Space</kbd> or click the middle mouse button |
+| **Brake and Hold** | Hold the left mouse button |
+| **Change Speed** | Press <kbd>[</kbd> to slow down or <kbd>]</kbd> to speed up |
+| **Emergency Stop** | Press <kbd>Esc</kbd> |
+| **Move the Tool** | Drag the handle icon with your mouse |
+| **Center the Tool** | Double-click the handle icon or click Reset in the popup |
 
 ---
 
 ## GitHub Setup
 
-Push this repository to GitHub with these commands:
+Push changes to your repository with these commands:
 
 ```bash
 cd /Users/ryan/git/webtoon-scroller
 
-# 1. Connect remote repository
-git remote set-url origin https://github.com/ryandhjeon/ScrollToon.git
-
-# 2. Push main branch
-git push -u origin main
-
-# 3. Push release tags
+# Push code and tags
+git push origin main
 git push origin --tags
 ```
