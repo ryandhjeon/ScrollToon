@@ -27,21 +27,25 @@
   let clutch = null;
 
   function isWebtoonReaderPage() {
+    const hostname = window.location.hostname;
     const href = window.location.href;
 
-    // 1. URL Path patterns for known comic platforms & chapter readers
+    // Immediately reject non-comic mainstream platforms
+    if (/google\.|youtube\.|github\.|amazon\.|reddit\.|twitter\.|x\.com|facebook\.|instagram\.|linkedin\.|wikipedia\.|netflix\.|apple\.com|yahoo\.|bing\./i.test(hostname)) {
+      return false;
+    }
+
+    // 1. URL Path patterns for recognized comic platforms & chapter readers
     const readerUrlPatterns = [
-      /webtoons\.com\/.*\/viewer/i,           // Line Webtoons
-      /comic\.naver\.com\/webtoon\/detail/i,  // Naver Webtoon
-      /tapas\.io\/episode\//i,                // Tapas
-      /mangadex\.org\/chapter\//i,            // MangaDex
-      /lezhin\.com\/.*\/[0-9]+/i,             // Lezhin
+      /webtoons\.com\/.*\/viewer/i,           // Line Webtoons episode viewer
+      /comic\.naver\.com\/webtoon\/detail/i,  // Naver Webtoon episode viewer
+      /tapas\.io\/episode\//i,                // Tapas episode reader
+      /mangadex\.org\/chapter\//i,            // MangaDex chapter reader
+      /lezhin\.com\/.*\/[0-9]+/i,             // Lezhin viewer
       /lezhinus\.com\/.*\/[0-9]+/i,
-      /\/chapter[-_0-9]/i,                    // Scanlation chapter readers (Asura, Reaper, etc.)
-      /\/ch[-_0-9]/i,
-      /\/read\//i,
-      /\/episode[-_0-9]/i,
-      /\/viewer\b/i,
+      /\/(comic|series|manga)\/.*-(chapter|ch)-[0-9]+/i,
+      /\/chapter-[0-9]+/i,                    // Scanlation chapter readers
+      /\/ch-[0-9]+/i,
       /demo\.html/i                           // Local test canvas
     ];
 
@@ -49,7 +53,7 @@
       return true;
     }
 
-    // 2. Specific reader DOM containers
+    // 2. Specific reader DOM containers unique to comic readers
     const readerSelectors = [
       '#_imageList',                          // Naver/Webtoons episode image canvas
       '#viewerBox',
@@ -58,10 +62,6 @@
       '#reader-area',                         // MangaDex / WP Manga
       '.reading-content',                     // Madara theme (Asura, Reaper, Flame, etc.)
       '.comic-container',                     // ScrollToon test canvas
-      '.chapter-content',
-      '#chapter-video-frame',
-      '.page-break',
-      '.comic-page',
       '.manga-reader',
       '.ts-main-image'
     ];
@@ -72,22 +72,41 @@
       }
     }
 
-    // 3. Heuristic: page has 3+ sequential images and scrollable height > 2.2x window height
+    // 3. Strict Heuristic for unlisted scanlation / manga readers:
+    // Webtoons are continuous vertical strips of wide comic images with almost NO text paragraphs.
+    // Articles, news, blogs, and stores have many <p> tags and few wide images.
+    const paragraphs = document.querySelectorAll('p');
+    if (paragraphs.length > 15) {
+      // Standard text article, news, or blog -> NOT a webtoon reader
+      return false;
+    }
+
     const images = document.querySelectorAll('img');
     const scrollHeight = Math.max(
       document.documentElement ? document.documentElement.scrollHeight : 0,
       document.body ? document.body.scrollHeight : 0
     );
 
-    if (images.length >= 3 && scrollHeight > window.innerHeight * 2.2) {
-      let tallImagesCount = 0;
-      for (let i = 0; i < images.length && i < 20; i++) {
+    // Must be a very long page (at least 3500px scrollable) with at least 5 images
+    if (images.length >= 5 && scrollHeight > 3500) {
+      let cumulativeComicHeight = 0;
+      let wideComicPanels = 0;
+
+      for (let i = 0; i < images.length && i < 30; i++) {
         const img = images[i];
-        if (img.naturalHeight > 300 || img.height > 300 || img.hasAttribute('data-src') || img.hasAttribute('data-original') || img.hasAttribute('data-url')) {
-          tallImagesCount++;
+        const rect = img.getBoundingClientRect();
+        const width = img.naturalWidth || rect.width || img.width || 0;
+        const height = img.naturalHeight || rect.height || img.height || 0;
+
+        // Comic panels are wide (> 350px) or tall (> 400px)
+        if (width >= 350 || height >= 400 || img.hasAttribute('data-src') || img.hasAttribute('data-original')) {
+          wideComicPanels++;
+          cumulativeComicHeight += Math.max(height, 400);
         }
       }
-      if (tallImagesCount >= 2) {
+
+      // Require at least 4 wide comic panels and > 3000px of image height
+      if (wideComicPanels >= 4 && cumulativeComicHeight >= 3000) {
         return true;
       }
     }
