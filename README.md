@@ -1,4 +1,4 @@
-# ScrollToon ⚡
+# ScrollToon - Webtoon Scroller Chrome Extension ⚡
 > High-performance Webtoon & Manga autoscroller Chrome Extension with a morphing Dynamic Island UI, tactile clutch braking, and predictive image preloading.
 
 ---
