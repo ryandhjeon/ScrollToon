@@ -1,7 +1,9 @@
 /**
  * ScrollToon - 120Hz Sub-pixel Physics Scroll Engine
- * Butter-smooth Apple-grade exponential spring physics.
- * Suspends downward motion while user is scrolling up so it never fights the user!
+ * Pure, reliable, and rock-solid:
+ * Cruising with exponential spring easing.
+ * Left-Click Hold = Hard Brake (Decelerates smoothly to 0).
+ * Trackpad is 100% native and untouched.
  */
 class WebtoonScroller {
   constructor(options = {}) {
@@ -10,11 +12,7 @@ class WebtoonScroller {
     this.currentSpeed = 0;
     this.targetSpeed = 0;
     this.isRunning = false;
-
-    // States
-    this.isBraking = false;               // Left-Click hold = Complete freeze
-    this.isSlowedDown = false;           // Two-finger hold = Gentle slow-glide (~35% speed)
-    this.isSuspendedForScrollUp = false; // Yield to user when scrolling up
+    this.isBraking = false; // Left-Click hold
 
     // Sub-pixel accumulator
     this.subPixelRemainder = 0;
@@ -93,8 +91,6 @@ class WebtoonScroller {
     if (this.isRunning) return;
     this.isRunning = true;
     this.isBraking = false;
-    this.isSlowedDown = false;
-    this.isSuspendedForScrollUp = false;
     this.targetSpeed = this.cruiseSpeed;
     this.lastTimestamp = performance.now();
     this.loop(this.lastTimestamp);
@@ -105,8 +101,6 @@ class WebtoonScroller {
     if (!this.isRunning) return;
     this.isRunning = false;
     this.isBraking = false;
-    this.isSlowedDown = false;
-    this.isSuspendedForScrollUp = false;
     this.targetSpeed = 0;
     this.currentSpeed = 0;
     this.subPixelRemainder = 0;
@@ -127,7 +121,7 @@ class WebtoonScroller {
 
   setCruiseSpeed(speed) {
     this.cruiseSpeed = Math.max(0.2, Math.min(6.0, Math.round(speed * 10) / 10));
-    if (this.isRunning && !this.isBraking && !this.isSlowedDown) {
+    if (this.isRunning && !this.isBraking) {
       this.targetSpeed = this.cruiseSpeed;
     }
     this.notifyState();
@@ -137,46 +131,20 @@ class WebtoonScroller {
     this.setCruiseSpeed(this.cruiseSpeed + delta);
   }
 
-  // 1. Hard Brake (Left-Click Hold): drops target speed to 0
+  // Hard Brake (Left-Click Hold): smoothly drops target speed to 0
   setHardBrake(active) {
     if (this.isBraking === active) return;
     this.isBraking = active;
     if (!this.isRunning) return;
 
-    this.recalculateTargetSpeed();
+    this.targetSpeed = active ? 0 : this.cruiseSpeed;
     this.notifyState();
-  }
-
-  // 2. Slow Down (Two-Finger Hold): drops target speed to ~35%
-  setSlowDown(active) {
-    if (this.isSlowedDown === active) return;
-    this.isSlowedDown = active;
-    if (!this.isRunning) return;
-
-    this.recalculateTargetSpeed();
-    this.notifyState();
-  }
-
-  // 3. Temporarily suspend downward motor while user scrolls UP manually
-  suspendForScrollUp(suspended) {
-    this.isSuspendedForScrollUp = suspended;
-  }
-
-  recalculateTargetSpeed() {
-    if (this.isBraking) {
-      this.targetSpeed = 0;
-    } else if (this.isSlowedDown) {
-      this.targetSpeed = Math.max(0.35, Math.round(this.cruiseSpeed * 0.35 * 10) / 10);
-    } else {
-      this.targetSpeed = this.cruiseSpeed;
-    }
   }
 
   notifyState() {
     this.onStateChange({
       isRunning: this.isRunning,
       isBraking: this.isBraking,
-      isSlowedDown: this.isSlowedDown,
       cruiseSpeed: this.cruiseSpeed,
       currentSpeed: this.currentSpeed,
       progress: this.getProgress()
@@ -190,15 +158,9 @@ class WebtoonScroller {
     this.lastTimestamp = now;
     const dtSeconds = dt / 1000;
 
-    // If user is actively scrolling UP, don't inject downward pixels
-    if (this.isSuspendedForScrollUp) {
-      this.animationFrameId = requestAnimationFrame((t) => this.loop(t));
-      return;
-    }
-
     // Organic Apple-grade exponential spring physics
     const isDecelerating = this.targetSpeed < this.currentSpeed;
-    const lambda = isDecelerating ? 4.8 : 3.8;
+    const lambda = isDecelerating ? 5.2 : 3.8;
     const decay = Math.exp(-lambda * dtSeconds);
 
     this.currentSpeed = this.targetSpeed + (this.currentSpeed - this.targetSpeed) * decay;

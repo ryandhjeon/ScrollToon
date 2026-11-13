@@ -168,12 +168,6 @@ class WebtoonDynamicIsland {
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
 
-      .speed-cluster.slow-mode {
-        border-color: rgba(255, 159, 67, 0.6);
-        background: rgba(255, 159, 67, 0.12);
-        box-shadow: 0 0 12px rgba(255, 159, 67, 0.3);
-      }
-
       .speed-cluster.brake-mode {
         border-color: rgba(255, 71, 87, 0.7);
         background: rgba(255, 71, 87, 0.15);
@@ -217,14 +211,6 @@ class WebtoonDynamicIsland {
       .speed-display.white-glow {
         color: #FFFFFF !important;
         font-weight: 800;
-      }
-
-      .speed-display.slow {
-        color: #FF9F43;
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 0.6px;
-        text-transform: uppercase;
       }
 
       .speed-display.brake {
@@ -489,14 +475,9 @@ class WebtoonDynamicIsland {
       speedDisplay.textContent = 'BRAKE';
       speedDisplay.className = 'speed-display brake';
       if (speedCluster) speedCluster.className = 'speed-cluster brake-mode';
-    } else if (state.isSlowedDown) {
-      speedDisplay.textContent = 'SLOW';
-      speedDisplay.className = 'speed-display slow';
-      if (speedCluster) speedCluster.className = 'speed-cluster slow-mode';
     } else {
       const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
       speedDisplay.textContent = formattedSpeed;
-      // Preserve white highlight if active
       if (this.whiteSpeedTimeout) {
         speedDisplay.className = 'speed-display white-glow';
       } else {

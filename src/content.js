@@ -1,6 +1,6 @@
 /**
  * ScrollToon - Main Content Script
- * Wires the Preloader, Physics Scroller, Clutch Controller, and Dynamic Island together.
+ * Wires Preloader, Physics Scroller, Clutch Controller, and Dynamic Island together.
  */
 (function() {
   if (window.__SCROLLTOON_INITIALIZED__) return;
@@ -13,7 +13,6 @@
   const defaultSettings = {
     defaultSpeed: 1.5,
     enableLeftClickBrake: true,
-    enableTwoFingerSlow: true,
     enableMiddleClickToggle: true,
     enableDoubleTapToggle: true
   };
@@ -39,16 +38,14 @@
     island.updateState({
       isRunning: false,
       isBraking: false,
-      isSlowedDown: false,
       cruiseSpeed: scroller.cruiseSpeed,
       currentSpeed: 0,
       progress: scroller.getProgress()
     });
 
-    // 5. Initialize Controls (Left-Click hold = Brake, Two-Finger hold = Slow)
+    // 5. Initialize Controls (Left-Click hold = Brake, [ / ] = Speed adjustment)
     const clutch = new window.ScrollToonClutch(scroller, {
       enableLeftClickBrake: settings.enableLeftClickBrake,
-      enableTwoFingerSlow: settings.enableTwoFingerSlow,
       enableMiddleClickToggle: settings.enableMiddleClickToggle,
       enableDoubleTapToggle: settings.enableDoubleTapToggle,
       onSpeedChange: (delta) => {

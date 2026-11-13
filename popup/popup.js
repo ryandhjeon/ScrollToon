@@ -3,14 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const speedVal = document.getElementById('speedVal');
   const leftClickBrake = document.getElementById('leftClickBrake');
   const middleClickToggle = document.getElementById('middleClickToggle');
-  const wheelBraking = document.getElementById('wheelBraking');
   const doubleTapToggle = document.getElementById('doubleTapToggle');
 
   const keys = {
     defaultSpeed: 1.5,
     enableLeftClickBrake: true,
     enableMiddleClickToggle: true,
-    enableWheelBraking: true,
     enableDoubleTapToggle: true
   };
 
@@ -20,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
     speedVal.textContent = parseFloat(defaultSpeedInput.value).toFixed(1) + 'x';
     leftClickBrake.checked = s.enableLeftClickBrake !== false;
     middleClickToggle.checked = s.enableMiddleClickToggle !== false;
-    wheelBraking.checked = s.enableWheelBraking !== false;
     doubleTapToggle.checked = s.enableDoubleTapToggle !== false;
   });
 
@@ -36,10 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   middleClickToggle.addEventListener('change', () => {
     chrome.storage.sync.set({ enableMiddleClickToggle: middleClickToggle.checked });
-  });
-
-  wheelBraking.addEventListener('change', () => {
-    chrome.storage.sync.set({ enableWheelBraking: wheelBraking.checked });
   });
 
   doubleTapToggle.addEventListener('change', () => {
