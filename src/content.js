@@ -13,8 +13,8 @@
   const defaultSettings = {
     defaultSpeed: 1.5,
     enableLeftClickBrake: true,
+    enableTwoFingerSlow: true,
     enableMiddleClickToggle: true,
-    enableWheelBraking: true,
     enableDoubleTapToggle: true
   };
 
@@ -39,16 +39,17 @@
     island.updateState({
       isRunning: false,
       isBraking: false,
+      isSlowedDown: false,
       cruiseSpeed: scroller.cruiseSpeed,
       currentSpeed: 0,
       progress: scroller.getProgress()
     });
 
-    // 5. Initialize Clutch & Gestures (Left-Click brake, Middle-Click toggle, [ ] hotkeys)
+    // 5. Initialize Controls (Left-Click hold = Brake, Two-Finger hold = Slow)
     const clutch = new window.ScrollToonClutch(scroller, {
       enableLeftClickBrake: settings.enableLeftClickBrake,
+      enableTwoFingerSlow: settings.enableTwoFingerSlow,
       enableMiddleClickToggle: settings.enableMiddleClickToggle,
-      enableWheelBraking: settings.enableWheelBraking,
       enableDoubleTapToggle: settings.enableDoubleTapToggle,
       onSpeedChange: (delta) => {
         if (island) island.triggerSpeedFeedback(delta);

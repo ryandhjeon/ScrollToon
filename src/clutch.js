@@ -1,26 +1,28 @@
 /**
- * ScrollToon - Dual Input Controller (Mouse & Trackpad Clutch)
+ * ScrollToon - Dual Input Controller
  * Left-Click Hold = Hard Brake (Stops completely)
- * Touchpad Two-Finger UP = Holds Slow Reading Speed (~35%)
- * Touchpad Two-Finger DOWN = Resumes Normal Cruise Speed
- * Middle-Click / Space = Toggle Start/Stop
- * [ / ] = Speed adjustment with HUD feedback
+ * Two-Finger Hold (Two-finger press on trackpad) = Slow Down (Glides at ~35% speed)
+ * Releasing fingers = Super natural spring ease back to cruise speed
+ * Scrolling up is NEVER intercepted or used as a trigger.
  */
 class WebtoonClutch {
   constructor(scroller, options = {}) {
     this.scroller = scroller;
     this.options = {
       enableLeftClickBrake: true,
+      enableTwoFingerSlow: true,
       enableMiddleClickToggle: true,
-      enableWheelBraking: true,
       enableDoubleTapToggle: true,
       onSpeedChange: options.onSpeedChange || (() => {}),
       ...options
     };
 
     this.isLeftBrakeActive = false;
+    this.isTwoFingerSlowActive = false;
     this.leftDownTimestamp = 0;
+    this.twoFingerDownTimestamp = 0;
     this.preventNextClick = false;
+    this.preventNextContextMenu = false;
     this.lastTapTime = 0;
 
     this.init();
@@ -28,32 +30,48 @@ class WebtoonClutch {
 
   init() {
     this.bindMouseEvents();
-    this.bindWheelEvents();
     this.bindKeyboardEvents();
   }
 
   bindMouseEvents() {
-    // 1. LEFT-CLICK HOLD = HARD CLUTCH BRAKE (stops page while held)
+    // 1. MOUSE / TRACKPAD PRESS EVENTS
     const onMouseDown = (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
-      if (e.button !== 0) return;
 
-      if (this.options.enableLeftClickBrake && this.scroller.isRunning) {
+      // ONE-FINGER PRESS (Left Click) -> HARD BRAKE
+      if (e.button === 0 && this.options.enableLeftClickBrake && this.scroller.isRunning) {
         this.leftDownTimestamp = performance.now();
         this.isLeftBrakeActive = true;
-        this.scroller.applyClutch(true);
+        this.scroller.setHardBrake(true);
+      }
+
+      // TWO-FINGER PRESS (Two-finger click on trackpad / Right-Click) -> SLOW DOWN
+      else if (e.button === 2 && this.options.enableTwoFingerSlow && this.scroller.isRunning) {
+        this.twoFingerDownTimestamp = performance.now();
+        this.isTwoFingerSlowActive = true;
+        this.preventNextContextMenu = true;
+        this.scroller.setSlowDown(true);
       }
     };
 
     const onMouseUp = (e) => {
-      if (e.button !== 0) return;
-
-      if (this.isLeftBrakeActive) {
+      // Releasing Left Click -> Release Hard Brake
+      if (e.button === 0 && this.isLeftBrakeActive) {
         this.isLeftBrakeActive = false;
-        this.scroller.applyClutch(false);
+        this.scroller.setHardBrake(false);
 
         if (performance.now() - this.leftDownTimestamp > 120) {
           this.preventNextClick = true;
+        }
+      }
+
+      // Releasing Two Fingers -> Release Slow Down
+      if (e.button === 2 && this.isTwoFingerSlowActive) {
+        this.isTwoFingerSlowActive = false;
+        this.scroller.setSlowDown(false);
+
+        if (performance.now() - this.twoFingerDownTimestamp > 120) {
+          this.preventNextContextMenu = true;
         }
       }
     };
@@ -61,6 +79,16 @@ class WebtoonClutch {
     window.addEventListener('mousedown', onMouseDown, { capture: true });
     window.addEventListener('mouseup', onMouseUp, { capture: true });
 
+    // Suppress native context menu when holding two fingers
+    window.addEventListener('contextmenu', (e) => {
+      if (this.isTwoFingerSlowActive || this.preventNextContextMenu) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.preventNextContextMenu = false;
+      }
+    }, { capture: true });
+
+    // Suppress accidental link opening when releasing left-click brake
     window.addEventListener('click', (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
 
@@ -72,7 +100,7 @@ class WebtoonClutch {
     }, { capture: true });
 
     window.addEventListener('dragstart', (e) => {
-      if (this.isLeftBrakeActive) {
+      if (this.isLeftBrakeActive || this.isTwoFingerSlowActive) {
         e.preventDefault();
       }
     }, { capture: true });
@@ -106,34 +134,6 @@ class WebtoonClutch {
         this.lastTapTime = now;
       }
     });
-  }
-
-  // 4. TOUCHPAD TWO-FINGER SCROLL
-  bindWheelEvents() {
-    const handleWheel = (e) => {
-      if (!this.options.enableWheelBraking) return;
-      if (!this.scroller.isRunning) return;
-
-      if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
-
-      const deltaY = e.deltaY;
-
-      // Two fingers moving UP -> HOLDS the slow reading speed!
-      if (deltaY < -1.5) {
-        e.preventDefault();
-        this.scroller.applyTwoFingerSlowDown();
-      }
-      // Two fingers moving DOWN -> Resumes normal cruising speed!
-      else if (deltaY > 8) {
-        if (this.scroller.isSlowedDown) {
-          e.preventDefault();
-          this.scroller.resumeCruiseSpeed();
-        }
-      }
-    };
-
-    window.addEventListener('wheel', handleWheel, { capture: true, passive: false });
-    document.addEventListener('wheel', handleWheel, { capture: true, passive: false });
   }
 
   bindKeyboardEvents() {

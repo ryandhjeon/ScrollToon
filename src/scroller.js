@@ -1,6 +1,8 @@
 /**
  * ScrollToon - 120Hz Sub-pixel Physics Scroll Engine
- * Two-finger scroll UP holds slow reading speed until you swipe DOWN (or after reading idle).
+ * Uses Apple-grade exponential spring damping for super natural transitions.
+ * Left-Click Hold = Hard Brake (Decelerates smoothly to 0)
+ * Two-Finger Hold = Slow Glide (Glides down smoothly to ~35% speed)
  */
 class WebtoonScroller {
   constructor(options = {}) {
@@ -9,10 +11,10 @@ class WebtoonScroller {
     this.currentSpeed = 0;
     this.targetSpeed = 0;
     this.isRunning = false;
-    this.isBraking = false;     // Left-Click hold = Hard stop
-    this.isSlowedDown = false; // Two-finger UP = Kept in slow mode
 
-    this.slowDownTimer = null;
+    // States
+    this.isBraking = false;     // Hard brake (Left click hold)
+    this.isSlowedDown = false; // Slow glide (Two finger hold)
 
     // Sub-pixel accumulator
     this.subPixelRemainder = 0;
@@ -106,10 +108,6 @@ class WebtoonScroller {
     this.targetSpeed = 0;
     this.currentSpeed = 0;
     this.subPixelRemainder = 0;
-    if (this.slowDownTimer) {
-      clearTimeout(this.slowDownTimer);
-      this.slowDownTimer = null;
-    }
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
@@ -137,56 +135,35 @@ class WebtoonScroller {
     this.setCruiseSpeed(this.cruiseSpeed + delta);
   }
 
-  // Hard Clutch Brake: stops completely while held (Left-Click)
-  applyClutch(engaged) {
-    if (this.slowDownTimer) {
-      clearTimeout(this.slowDownTimer);
-      this.slowDownTimer = null;
-    }
-
-    this.isBraking = engaged;
+  // 1. Hard Brake (Left-Click Hold): drops target to 0
+  setHardBrake(active) {
+    this.isBraking = active;
     if (!this.isRunning) return;
 
-    if (engaged) {
+    if (active) {
       this.targetSpeed = 0;
     } else {
-      // Restore appropriate speed
-      this.targetSpeed = this.isSlowedDown ? Math.max(0.35, this.cruiseSpeed * 0.35) : this.cruiseSpeed;
+      this.recalculateTargetSpeed();
     }
     this.notifyState();
   }
 
-  // Two-Finger UP: Keeps the slow reading speed!
-  applyTwoFingerSlowDown() {
-    if (!this.isRunning || this.isBraking) return;
+  // 2. Slow Down (Two-Finger Hold): drops target to ~35% cruise speed
+  setSlowDown(active) {
+    this.isSlowedDown = active;
+    if (!this.isRunning) return;
 
-    this.isSlowedDown = true;
-    const slowSpeed = Math.max(0.35, Math.round(this.cruiseSpeed * 0.35 * 10) / 10);
-    this.targetSpeed = slowSpeed;
-
+    this.recalculateTargetSpeed();
     this.notifyState();
-
-    if (this.slowDownTimer) {
-      clearTimeout(this.slowDownTimer);
-    }
-
-    // Holds the slow speed for 3.5 seconds of reading, or until user swipes DOWN
-    this.slowDownTimer = setTimeout(() => {
-      this.resumeCruiseSpeed();
-    }, 3500);
   }
 
-  // Two-Finger DOWN: Resumes normal full cruise speed immediately!
-  resumeCruiseSpeed() {
-    if (this.slowDownTimer) {
-      clearTimeout(this.slowDownTimer);
-      this.slowDownTimer = null;
-    }
-
-    if (this.isRunning && this.isSlowedDown) {
-      this.isSlowedDown = false;
+  recalculateTargetSpeed() {
+    if (this.isBraking) {
+      this.targetSpeed = 0;
+    } else if (this.isSlowedDown) {
+      this.targetSpeed = Math.max(0.35, Math.round(this.cruiseSpeed * 0.35 * 10) / 10);
+    } else {
       this.targetSpeed = this.cruiseSpeed;
-      this.notifyState();
     }
   }
 
@@ -206,16 +183,24 @@ class WebtoonScroller {
 
     const dt = Math.min(64, now - (this.lastTimestamp || now));
     this.lastTimestamp = now;
+    const dtSeconds = dt / 1000;
 
-    const lerpRate = this.isBraking ? 0.35 : 0.12;
-    this.currentSpeed += (this.targetSpeed - this.currentSpeed) * lerpRate;
+    // Apple-grade exponential spring damping:
+    // Decelerating into slow or brake: smooth decay (lambda = 5.0)
+    // Accelerating back to cruise: gentle natural rise (lambda = 3.5)
+    const isDecelerating = this.targetSpeed < this.currentSpeed;
+    const lambda = isDecelerating ? 5.2 : 3.6;
+    const decay = Math.exp(-lambda * dtSeconds);
 
-    if (this.isBraking && this.currentSpeed < 0.03) {
+    this.currentSpeed = this.targetSpeed + (this.currentSpeed - this.targetSpeed) * decay;
+
+    // Clamp very small values
+    if (this.isBraking && this.currentSpeed < 0.02) {
       this.currentSpeed = 0;
     }
 
     if (this.currentSpeed > 0.005) {
-      const targetDeltaPx = (this.currentSpeed * this.basePixelsPerSec * (dt / 1000));
+      const targetDeltaPx = (this.currentSpeed * this.basePixelsPerSec * dtSeconds);
       const totalToMove = targetDeltaPx + this.subPixelRemainder;
 
       const wholePixels = Math.floor(totalToMove);
