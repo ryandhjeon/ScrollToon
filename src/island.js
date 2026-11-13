@@ -1,7 +1,7 @@
 /**
  * ScrollToon - Ultra-Minimal Proximity Ghost Dynamic Island UI
- * In low opacity, pressing [ or ] shows the updated speed in crisp white
- * in the middle of the tool, while keeping the rest of the tool fully ghosted.
+ * Speed appears in a crisp, 100% opaque layer directly ABOVE the tool
+ * so you can see the updated speed with crystal-clear contrast.
  */
 class WebtoonDynamicIsland {
   constructor(scroller) {
@@ -9,12 +9,14 @@ class WebtoonDynamicIsland {
     this.isGhosted = false;
     this.proximityThresholdPx = 140;
     this.fadeIdleTimeout = null;
-    this.whiteSpeedTimeout = null;
+    this.aboveBadgeTimeout = null;
     this.isDragging = false;
 
     this.host = null;
     this.shadow = null;
     this.islandEl = null;
+    this.cardEl = null;
+    this.aboveBadgeEl = null;
 
     this.init();
   }
@@ -73,19 +75,36 @@ class WebtoonDynamicIsland {
         left: 50%;
         transform: translateX(-50%);
         pointer-events: auto;
-        opacity: 1;
-        transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
 
-      /* Low-opacity ghost mode while cruising */
-      .island-wrapper.ghost {
-        opacity: 0.16;
+      /* LAYER ABOVE: Crisp 100% Opaque Pure White Badge */
+      .above-speed-badge {
+        background: rgba(14, 18, 24, 0.94);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65),
+                    0 0 1px rgba(255, 255, 255, 0.4);
+        border-radius: 9999px;
+        padding: 4px 14px;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: -0.3px;
+        color: #FFFFFF !important;
+        opacity: 0;
+        pointer-events: none;
+        margin-bottom: 8px;
+        transform: translateY(4px);
+        transition: opacity 0.18s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 99999;
       }
 
-      /* Hovering cursor directly over island wakes it to full clarity */
-      .island-wrapper:hover {
+      .above-speed-badge.visible {
         opacity: 1 !important;
+        transform: translateY(0);
       }
 
       /* Frosted Glass Shell */
@@ -105,10 +124,18 @@ class WebtoonDynamicIsland {
         padding: 6px 14px;
         height: 48px;
         cursor: default;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                    border-color 0.2s ease,
+                    box-shadow 0.2s ease;
+      }
+
+      /* Ghost mode applied directly to card so above-layer is never dimmed */
+      .island-card.ghost {
+        opacity: 0.16;
       }
 
       .island-card:hover {
+        opacity: 1 !important;
         border-color: rgba(255, 255, 255, 0.35);
         box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6), 
                     0 4px 12px rgba(0, 0, 0, 0.35),
@@ -204,13 +231,6 @@ class WebtoonDynamicIsland {
         min-width: 44px;
         text-align: center;
         cursor: ns-resize;
-        transition: color 0.25s ease;
-      }
-
-      /* Crisp white highlight in the middle on [ or ] press */
-      .speed-display.white-glow {
-        color: #FFFFFF !important;
-        font-weight: 800;
       }
 
       .speed-display.brake {
@@ -258,6 +278,11 @@ class WebtoonDynamicIsland {
       <style>${this.getStyles()}</style>
 
       <div class="island-wrapper" id="islandWrapper">
+        
+        <!-- LAYER ABOVE: Crisp 100% Opaque Pure White Speed Badge -->
+        <div class="above-speed-badge" id="aboveSpeedBadge">1.5x</div>
+
+        <!-- MAIN TOOL CARD (dims to 16% ghost mode) -->
         <div class="island-card" id="islandCard">
           
           <div class="drag-handle" id="dragHandle" title="Drag to reposition">
@@ -288,10 +313,13 @@ class WebtoonDynamicIsland {
           </div>
           <span class="progress-text" id="progressText">0%</span>
         </div>
+
       </div>
     `;
 
     this.islandEl = this.shadow.querySelector('#islandWrapper');
+    this.cardEl = this.shadow.querySelector('#islandCard');
+    this.aboveBadgeEl = this.shadow.querySelector('#aboveSpeedBadge');
   }
 
   bindEvents() {
@@ -331,36 +359,35 @@ class WebtoonDynamicIsland {
     // Dragging
     this.setupDraggable(dragHandle);
 
-    // Direct hover on island forces full opacity
-    this.islandEl.addEventListener('mouseenter', () => {
+    // Direct hover on card forces full opacity
+    this.cardEl.addEventListener('mouseenter', () => {
       this.clearFadeTimer();
       this.setGhost(false);
     });
 
-    this.islandEl.addEventListener('mouseleave', () => {
+    this.cardEl.addEventListener('mouseleave', () => {
       if (this.scroller.isRunning) {
         this.scheduleFade();
       }
     });
   }
 
-  // Puts the speed number in crisp clean white in the middle of the tool
-  // WITHOUT waking up the rest of the tool's low opacity
+  // Shows the updated speed in the crisp 100% solid white layer directly above the tool
   triggerSpeedFeedback() {
-    const display = this.shadow.querySelector('#speedDisplay');
-    if (!display) return;
+    if (!this.aboveBadgeEl) return;
 
-    display.classList.add('white-glow');
+    this.aboveBadgeEl.textContent = this.scroller.cruiseSpeed.toFixed(1) + 'x';
+    this.aboveBadgeEl.classList.add('visible');
 
-    if (this.whiteSpeedTimeout) {
-      clearTimeout(this.whiteSpeedTimeout);
+    if (this.aboveBadgeTimeout) {
+      clearTimeout(this.aboveBadgeTimeout);
     }
 
-    // Keep clean white for 800ms, then smoothly fade back
-    this.whiteSpeedTimeout = setTimeout(() => {
-      display.classList.remove('white-glow');
-      this.whiteSpeedTimeout = null;
-    }, 800);
+    // Keep visible for 850ms, then smoothly fade out
+    this.aboveBadgeTimeout = setTimeout(() => {
+      this.aboveBadgeEl.classList.remove('visible');
+      this.aboveBadgeTimeout = null;
+    }, 850);
   }
 
   setupDraggable(handle) {
@@ -404,9 +431,9 @@ class WebtoonDynamicIsland {
 
   setupProximityWatcher() {
     window.addEventListener('mousemove', (e) => {
-      if (!this.islandEl || this.isDragging) return;
+      if (!this.cardEl || this.isDragging) return;
 
-      const rect = this.islandEl.getBoundingClientRect();
+      const rect = this.cardEl.getBoundingClientRect();
       const dx = Math.max(rect.left - e.clientX, 0, e.clientX - rect.right);
       const dy = Math.max(rect.top - e.clientY, 0, e.clientY - rect.bottom);
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -445,10 +472,11 @@ class WebtoonDynamicIsland {
 
   setGhost(ghost) {
     this.isGhosted = ghost;
+    if (!this.cardEl) return;
     if (ghost) {
-      this.islandEl.classList.add('ghost');
+      this.cardEl.classList.add('ghost');
     } else {
-      this.islandEl.classList.remove('ghost');
+      this.cardEl.classList.remove('ghost');
     }
   }
 
@@ -478,11 +506,7 @@ class WebtoonDynamicIsland {
     } else {
       const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
       speedDisplay.textContent = formattedSpeed;
-      if (this.whiteSpeedTimeout) {
-        speedDisplay.className = 'speed-display white-glow';
-      } else {
-        speedDisplay.className = 'speed-display';
-      }
+      speedDisplay.className = 'speed-display';
       if (speedCluster) speedCluster.className = 'speed-cluster';
     }
 
