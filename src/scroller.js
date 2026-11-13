@@ -1,7 +1,6 @@
 /**
  * ScrollToon - 120Hz Sub-pixel Physics Scroll Engine
- * Supports normal cruising, two-finger slow-glide (keeps moving at ~35% speed),
- * and hard clutch braking (stops on Left-Click hold).
+ * Two-finger scroll UP holds slow reading speed until you swipe DOWN (or after reading idle).
  */
 class WebtoonScroller {
   constructor(options = {}) {
@@ -10,8 +9,8 @@ class WebtoonScroller {
     this.currentSpeed = 0;
     this.targetSpeed = 0;
     this.isRunning = false;
-    this.isBraking = false;     // Hard brake (stops)
-    this.isSlowedDown = false; // Two-finger slow-glide (continues down at low speed)
+    this.isBraking = false;     // Left-Click hold = Hard stop
+    this.isSlowedDown = false; // Two-finger UP = Kept in slow mode
 
     this.slowDownTimer = null;
 
@@ -151,17 +150,17 @@ class WebtoonScroller {
     if (engaged) {
       this.targetSpeed = 0;
     } else {
-      this.targetSpeed = this.cruiseSpeed;
+      // Restore appropriate speed
+      this.targetSpeed = this.isSlowedDown ? Math.max(0.35, this.cruiseSpeed * 0.35) : this.cruiseSpeed;
     }
     this.notifyState();
   }
 
-  // Two-Finger Touchpad Slow-Glide: CONTINUES SCROLLING DOWN at ~35% speed
+  // Two-Finger UP: Keeps the slow reading speed!
   applyTwoFingerSlowDown() {
     if (!this.isRunning || this.isBraking) return;
 
     this.isSlowedDown = true;
-    // Set target speed to a gentle crawl (e.g. 1.5x -> 0.45x, minimum 0.35x)
     const slowSpeed = Math.max(0.35, Math.round(this.cruiseSpeed * 0.35 * 10) / 10);
     this.targetSpeed = slowSpeed;
 
@@ -171,16 +170,24 @@ class WebtoonScroller {
       clearTimeout(this.slowDownTimer);
     }
 
-    // Keep slow speed while two fingers are moving.
-    // 600ms after fingers stop, smoothly ease back up to full cruising speed!
+    // Holds the slow speed for 3.5 seconds of reading, or until user swipes DOWN
     this.slowDownTimer = setTimeout(() => {
-      if (this.isRunning && !this.isBraking && this.isSlowedDown) {
-        this.isSlowedDown = false;
-        this.targetSpeed = this.cruiseSpeed;
-        this.notifyState();
-      }
+      this.resumeCruiseSpeed();
+    }, 3500);
+  }
+
+  // Two-Finger DOWN: Resumes normal full cruise speed immediately!
+  resumeCruiseSpeed() {
+    if (this.slowDownTimer) {
+      clearTimeout(this.slowDownTimer);
       this.slowDownTimer = null;
-    }, 600);
+    }
+
+    if (this.isRunning && this.isSlowedDown) {
+      this.isSlowedDown = false;
+      this.targetSpeed = this.cruiseSpeed;
+      this.notifyState();
+    }
   }
 
   notifyState() {
@@ -200,9 +207,6 @@ class WebtoonScroller {
     const dt = Math.min(64, now - (this.lastTimestamp || now));
     this.lastTimestamp = now;
 
-    // Physics interpolation:
-    // When braking: rapid deceleration to 0
-    // When slowing down or cruising: gentle spring easing
     const lerpRate = this.isBraking ? 0.35 : 0.12;
     this.currentSpeed += (this.targetSpeed - this.currentSpeed) * lerpRate;
 

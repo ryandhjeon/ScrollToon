@@ -1,7 +1,8 @@
 /**
  * ScrollToon - Dual Input Controller (Mouse & Trackpad Clutch)
  * Left-Click Hold = Hard Brake (Stops completely)
- * Touchpad Two-Finger Counter-Scroll = Slow-Glide (Never stops, always continues down at ~35% speed)
+ * Touchpad Two-Finger UP = Holds Slow Reading Speed (~35%)
+ * Touchpad Two-Finger DOWN = Resumes Normal Cruise Speed
  * Middle-Click / Space = Toggle Start/Stop
  * [ / ] = Speed adjustment with HUD feedback
  */
@@ -107,7 +108,7 @@ class WebtoonClutch {
     });
   }
 
-  // 4. TOUCHPAD TWO-FINGER SCROLL & MOUSE WHEEL
+  // 4. TOUCHPAD TWO-FINGER SCROLL
   bindWheelEvents() {
     const handleWheel = (e) => {
       if (!this.options.enableWheelBraking) return;
@@ -117,10 +118,17 @@ class WebtoonClutch {
 
       const deltaY = e.deltaY;
 
-      // Two fingers moving UP: NEVER STOPS, strictly slows down into slow-glide
+      // Two fingers moving UP -> HOLDS the slow reading speed!
       if (deltaY < -1.5) {
         e.preventDefault();
         this.scroller.applyTwoFingerSlowDown();
+      }
+      // Two fingers moving DOWN -> Resumes normal cruising speed!
+      else if (deltaY > 8) {
+        if (this.scroller.isSlowedDown) {
+          e.preventDefault();
+          this.scroller.resumeCruiseSpeed();
+        }
       }
     };
 
