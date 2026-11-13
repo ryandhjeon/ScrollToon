@@ -1,6 +1,7 @@
 /**
  * ScrollToon - Proximity Ghost Dynamic Island UI with Minimal Speed HUD
- * Sleek, compact pill: Play/Pause, - Speed +, Reading Progress, Brake/Slow Badge.
+ * Compact pill: Play/Pause, [ - SPEED/SLOW/BRAKE + ], Reading Progress.
+ * Unifies status directly inside the central speed display.
  */
 class WebtoonDynamicIsland {
   constructor(scroller) {
@@ -203,7 +204,7 @@ class WebtoonDynamicIsland {
         fill: currentColor;
       }
 
-      /* Speed Controls */
+      /* Speed Controls Cluster */
       .speed-cluster {
         display: flex;
         align-items: center;
@@ -212,13 +213,25 @@ class WebtoonDynamicIsland {
         padding: 3px 8px;
         border-radius: 9999px;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease;
+        transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease, box-shadow 0.15s ease;
       }
 
       .speed-cluster.pulse {
         transform: scale(1.1);
         border-color: #00F5A0;
         box-shadow: 0 0 14px rgba(0, 245, 160, 0.4);
+      }
+
+      .speed-cluster.slow-mode {
+        border-color: rgba(255, 159, 67, 0.6);
+        background: rgba(255, 159, 67, 0.12);
+        box-shadow: 0 0 12px rgba(255, 159, 67, 0.3);
+      }
+
+      .speed-cluster.brake-mode {
+        border-color: rgba(255, 71, 87, 0.7);
+        background: rgba(255, 71, 87, 0.15);
+        box-shadow: 0 0 16px rgba(255, 71, 87, 0.5);
       }
 
       .speed-step-btn {
@@ -241,14 +254,33 @@ class WebtoonDynamicIsland {
         color: #FFFFFF;
       }
 
+      /* Unified Speed Display: shows 1.5x, SLOW, or BRAKE */
       .speed-display {
         font-size: 13px;
         font-weight: 700;
         letter-spacing: -0.3px;
         color: #00F5A0;
-        min-width: 36px;
+        min-width: 44px;
         text-align: center;
         cursor: ns-resize;
+        transition: color 0.18s ease, transform 0.15s ease;
+      }
+
+      .speed-display.slow {
+        color: #FF9F43;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+
+      .speed-display.brake {
+        color: #FF4757;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        animation: pulse 0.7s infinite alternate ease-in-out;
       }
 
       /* Progress Bar & Reading Stats */
@@ -275,30 +307,9 @@ class WebtoonDynamicIsland {
         min-width: 28px;
       }
 
-      /* Brake / Slow Status Indicator */
-      .brake-badge {
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        background: #FF4757;
-        color: #FFF;
-        padding: 2px 7px;
-        border-radius: 9999px;
-        display: none;
-        animation: pulse 0.9s infinite alternate ease-in-out;
-      }
-      .brake-badge.active {
-        display: inline-block;
-      }
-      .brake-badge.slow {
-        background: #FF9F43; /* Warm amber for slow-glide */
-        color: #0C1014;
-      }
-
       @keyframes pulse {
-        from { opacity: 0.75; transform: scale(0.97); }
-        to { opacity: 1; transform: scale(1.03); }
+        from { opacity: 0.75; transform: scale(0.96); }
+        to { opacity: 1; transform: scale(1.04); }
       }
     `;
   }
@@ -334,6 +345,7 @@ class WebtoonDynamicIsland {
             <svg id="pauseIcon" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
 
+          <!-- Speed & State Cluster (Shows 1.5x / SLOW / BRAKE) -->
           <div class="speed-cluster" id="speedCluster" title="Hover & scroll wheel to adjust speed">
             <button class="speed-step-btn" id="speedDecBtn">-</button>
             <span class="speed-display" id="speedDisplay">1.5x</span>
@@ -344,8 +356,6 @@ class WebtoonDynamicIsland {
             <div class="progress-fill" id="progressFill"></div>
           </div>
           <span class="progress-text" id="progressText">0%</span>
-
-          <span class="brake-badge" id="brakeBadge">BRAKE</span>
         </div>
       </div>
     `;
@@ -539,9 +549,9 @@ class WebtoonDynamicIsland {
     const playIcon = this.shadow.querySelector('#playIcon');
     const pauseIcon = this.shadow.querySelector('#pauseIcon');
     const speedDisplay = this.shadow.querySelector('#speedDisplay');
-    const brakeBadge = this.shadow.querySelector('#brakeBadge');
+    const speedCluster = this.shadow.querySelector('#speedCluster');
 
-    if (!playIcon || !pauseIcon) return;
+    if (!playIcon || !pauseIcon || !speedDisplay) return;
 
     if (state.isRunning) {
       playIcon.style.display = 'none';
@@ -554,19 +564,22 @@ class WebtoonDynamicIsland {
       this.setGhost(false);
     }
 
-    const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
-    speedDisplay.textContent = formattedSpeed;
-
+    // Unify State right inside the speed display!
     if (state.isBraking) {
-      brakeBadge.textContent = 'BRAKE';
-      brakeBadge.className = 'brake-badge active';
+      speedDisplay.textContent = 'BRAKE';
+      speedDisplay.className = 'speed-display brake';
+      if (speedCluster) speedCluster.className = 'speed-cluster brake-mode';
       this.setGhost(false);
     } else if (state.isSlowedDown) {
-      brakeBadge.textContent = 'SLOW';
-      brakeBadge.className = 'brake-badge active slow';
+      speedDisplay.textContent = 'SLOW';
+      speedDisplay.className = 'speed-display slow';
+      if (speedCluster) speedCluster.className = 'speed-cluster slow-mode';
       this.setGhost(false);
     } else {
-      brakeBadge.className = 'brake-badge';
+      const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
+      speedDisplay.textContent = formattedSpeed;
+      speedDisplay.className = 'speed-display';
+      if (speedCluster) speedCluster.className = 'speed-cluster';
     }
 
     this.updateProgress(state.progress);
