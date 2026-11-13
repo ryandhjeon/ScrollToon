@@ -11,7 +11,7 @@ class WebtoonDynamicIsland {
     this.proximityThresholdPx = 140;
     this.fadeIdleTimeout = null;
     this.feedbackTimeout = null;
-    this.statusNotification = null;
+    this.lightingTimeout = null;
     this.hasInitializedRunning = false;
     this.wasRunning = false;
     this.isDragging = false;
@@ -151,13 +151,6 @@ class WebtoonDynamicIsland {
         font-weight: 800;
       }
 
-      /* Active Start/Stop notifications in ghost mode: Crisp 100% Solid Opacity */
-      .island-card.ghost .speed-display.status-start,
-      .island-card.ghost .speed-display.status-stop {
-        opacity: 1 !important;
-        transform: none;
-      }
-
       .island-card:hover {
         background: rgba(16, 20, 26, 0.92) !important;
         box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65), 
@@ -202,7 +195,10 @@ class WebtoonDynamicIsland {
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                    background 0.25s ease,
+                    box-shadow 0.25s ease,
+                    opacity 0.3s ease;
         box-shadow: 0 0 12px rgba(0, 245, 160, 0.45);
       }
       .play-btn:hover {
@@ -217,6 +213,70 @@ class WebtoonDynamicIsland {
         width: 16px;
         height: 16px;
         fill: currentColor;
+      }
+
+      /* Lighting Animation: START (Play) */
+      @keyframes iconLightingStart {
+        0% {
+          transform: scale(0.85);
+          box-shadow: 0 0 0 rgba(0, 245, 160, 0);
+          filter: brightness(1.7);
+        }
+        30% {
+          transform: scale(1.24);
+          box-shadow: 0 0 24px rgba(0, 245, 160, 1), 0 0 46px rgba(0, 245, 160, 0.6);
+          filter: brightness(1.35);
+        }
+        60% {
+          transform: scale(1.0);
+          box-shadow: 0 0 16px rgba(0, 245, 160, 0.7);
+          filter: brightness(1.1);
+        }
+        100% {
+          transform: scale(1.0);
+          box-shadow: 0 0 8px rgba(0, 245, 160, 0.3);
+          filter: brightness(1.0);
+        }
+      }
+
+      /* Lighting Animation: STOP (Pause) */
+      @keyframes iconLightingStop {
+        0% {
+          transform: scale(0.85);
+          box-shadow: 0 0 0 rgba(255, 71, 87, 0);
+          filter: brightness(1.7);
+        }
+        30% {
+          transform: scale(1.24);
+          box-shadow: 0 0 24px rgba(255, 71, 87, 1), 0 0 46px rgba(255, 71, 87, 0.6);
+          filter: brightness(1.35);
+        }
+        60% {
+          transform: scale(1.0);
+          box-shadow: 0 0 16px rgba(255, 71, 87, 0.7);
+          filter: brightness(1.1);
+        }
+        100% {
+          transform: scale(1.0);
+          box-shadow: 0 0 8px rgba(255, 71, 87, 0.3);
+          filter: brightness(1.0);
+        }
+      }
+
+      .island-card.ghost .play-btn.light-start,
+      .play-btn.light-start {
+        opacity: 1 !important;
+        background: #00F5A0 !important;
+        color: #0C1014 !important;
+        animation: iconLightingStart 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      .island-card.ghost .play-btn.light-stop,
+      .play-btn.light-stop {
+        opacity: 1 !important;
+        background: #FF4757 !important;
+        color: #FFFFFF !important;
+        animation: iconLightingStop 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
 
       /* Speed Controls Cluster */
@@ -280,24 +340,6 @@ class WebtoonDynamicIsland {
         letter-spacing: 0.6px;
         text-transform: uppercase;
         animation: pulse 0.7s infinite alternate ease-in-out;
-      }
-
-      .speed-display.status-start {
-        color: #00F5A0 !important;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.6px;
-        text-transform: uppercase;
-        opacity: 1 !important;
-      }
-
-      .speed-display.status-stop {
-        color: #FF4757 !important;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.6px;
-        text-transform: uppercase;
-        opacity: 1 !important;
       }
 
       /* Progress Bar & Reading Stats */
@@ -431,7 +473,6 @@ class WebtoonDynamicIsland {
     if (this.feedbackTimeout) {
       clearTimeout(this.feedbackTimeout);
     }
-    this.statusNotification = null;
 
     speedDisplay.textContent = this.scroller.cruiseSpeed.toFixed(1) + 'x';
     speedDisplay.className = 'speed-display active-feedback';
@@ -443,27 +484,24 @@ class WebtoonDynamicIsland {
     }, 850);
   }
 
-  // Notifies Start / Stop state in the center display during low opacity mode
-  triggerStatusNotification(type) {
-    const speedDisplay = this.shadow.querySelector('#speedDisplay');
-    if (!speedDisplay || this.scroller.isBraking) return;
+  // Triggers a radiant lighting flash animation on the Start / Stop icon
+  triggerIconLighting(type) {
+    const playBtn = this.shadow.querySelector('#playBtn');
+    if (!playBtn) return;
 
-    if (this.feedbackTimeout) {
-      clearTimeout(this.feedbackTimeout);
+    if (this.lightingTimeout) {
+      clearTimeout(this.lightingTimeout);
     }
 
-    this.statusNotification = type;
-    speedDisplay.textContent = type;
-    speedDisplay.className = `speed-display status-${type.toLowerCase()}`;
+    playBtn.classList.remove('light-start', 'light-stop');
+    // Force DOM reflow so repeated toggles replay animation cleanly
+    void playBtn.offsetWidth;
 
-    // Display for 900ms, then smoothly revert back to cruising speed in ghost opacity
-    this.feedbackTimeout = setTimeout(() => {
-      this.statusNotification = null;
-      this.feedbackTimeout = null;
-      if (!this.scroller.isBraking) {
-        speedDisplay.textContent = this.scroller.cruiseSpeed.toFixed(1) + 'x';
-        speedDisplay.className = 'speed-display';
-      }
+    playBtn.classList.add(type === 'START' ? 'light-start' : 'light-stop');
+
+    this.lightingTimeout = setTimeout(() => {
+      playBtn.classList.remove('light-start', 'light-stop');
+      this.lightingTimeout = null;
     }, 900);
   }
 
@@ -647,29 +685,20 @@ class WebtoonDynamicIsland {
       this.scheduleFade();
     }
 
-    // Check for Start / Stop running transitions
+    // Check for Start / Stop running transitions to trigger lighting animation on the icon
     if (!this.hasInitializedRunning) {
       this.hasInitializedRunning = true;
       this.wasRunning = !!state.isRunning;
     } else if (this.wasRunning !== !!state.isRunning) {
       const isNowRunning = !!state.isRunning;
       this.wasRunning = isNowRunning;
-      this.triggerStatusNotification(isNowRunning ? 'START' : 'STOP');
+      this.triggerIconLighting(isNowRunning ? 'START' : 'STOP');
     }
 
     if (state.isBraking) {
-      if (this.feedbackTimeout) {
-        clearTimeout(this.feedbackTimeout);
-        this.feedbackTimeout = null;
-      }
-      this.statusNotification = null;
       speedDisplay.textContent = 'BRAKE';
       speedDisplay.className = 'speed-display brake';
       if (speedCluster) speedCluster.className = 'speed-cluster brake-mode';
-    } else if (this.statusNotification) {
-      speedDisplay.textContent = this.statusNotification;
-      speedDisplay.className = `speed-display status-${this.statusNotification.toLowerCase()}`;
-      if (speedCluster) speedCluster.className = 'speed-cluster';
     } else {
       const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
       speedDisplay.textContent = formattedSpeed;
@@ -699,7 +728,10 @@ class WebtoonDynamicIsland {
       clearTimeout(this.feedbackTimeout);
       this.feedbackTimeout = null;
     }
-    this.statusNotification = null;
+    if (this.lightingTimeout) {
+      clearTimeout(this.lightingTimeout);
+      this.lightingTimeout = null;
+    }
     if (this.host) {
       this.host.remove();
       this.host = null;
