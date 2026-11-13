@@ -216,68 +216,68 @@ class WebtoonDynamicIsland {
         fill: currentColor;
       }
 
-      /* Lighting Animation: START (Play) */
-      @keyframes iconLightingStart {
+      /* Minimalist Calm Breath Animation: START (Play) */
+      @keyframes calmLightingStart {
         0% {
-          transform: scale(0.85);
-          box-shadow: 0 0 0 rgba(0, 245, 160, 0);
-          filter: brightness(1.7);
+          opacity: 0.05;
+          transform: scale(0.97);
+          box-shadow: none;
         }
-        30% {
-          transform: scale(1.24);
-          box-shadow: 0 0 24px rgba(0, 245, 160, 1), 0 0 46px rgba(0, 245, 160, 0.6);
-          filter: brightness(1.35);
+        25% {
+          opacity: 0.85;
+          transform: scale(1.02);
+          box-shadow: 0 0 10px rgba(0, 245, 160, 0.35);
         }
         60% {
+          opacity: 0.85;
           transform: scale(1.0);
-          box-shadow: 0 0 16px rgba(0, 245, 160, 0.7);
-          filter: brightness(1.1);
+          box-shadow: 0 0 6px rgba(0, 245, 160, 0.2);
         }
         100% {
+          opacity: 0.05;
           transform: scale(1.0);
-          box-shadow: 0 0 8px rgba(0, 245, 160, 0.3);
-          filter: brightness(1.0);
+          box-shadow: none;
         }
       }
 
-      /* Lighting Animation: STOP (Pause) */
-      @keyframes iconLightingStop {
+      /* Minimalist Calm Breath Animation: STOP (Pause) */
+      @keyframes calmLightingStop {
         0% {
-          transform: scale(0.85);
-          box-shadow: 0 0 0 rgba(255, 71, 87, 0);
-          filter: brightness(1.7);
+          opacity: 0.05;
+          transform: scale(0.97);
+          box-shadow: none;
         }
-        30% {
-          transform: scale(1.24);
-          box-shadow: 0 0 24px rgba(255, 71, 87, 1), 0 0 46px rgba(255, 71, 87, 0.6);
-          filter: brightness(1.35);
+        25% {
+          opacity: 0.75;
+          transform: scale(1.02);
+          box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
         }
         60% {
+          opacity: 0.75;
           transform: scale(1.0);
-          box-shadow: 0 0 16px rgba(255, 71, 87, 0.7);
-          filter: brightness(1.1);
+          box-shadow: 0 0 5px rgba(255, 255, 255, 0.12);
         }
         100% {
+          opacity: 0.05;
           transform: scale(1.0);
-          box-shadow: 0 0 8px rgba(255, 71, 87, 0.3);
-          filter: brightness(1.0);
+          box-shadow: none;
         }
       }
 
       .island-card.ghost .play-btn.light-start,
       .play-btn.light-start {
-        opacity: 1 !important;
+        opacity: 0.85;
         background: #00F5A0 !important;
         color: #0C1014 !important;
-        animation: iconLightingStart 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: calmLightingStart 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
 
       .island-card.ghost .play-btn.light-stop,
       .play-btn.light-stop {
-        opacity: 1 !important;
-        background: #FF4757 !important;
+        opacity: 0.75;
+        background: rgba(255, 255, 255, 0.22) !important;
         color: #FFFFFF !important;
-        animation: iconLightingStop 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: calmLightingStop 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
 
       /* Speed Controls Cluster */
@@ -394,8 +394,8 @@ class WebtoonDynamicIsland {
           </div>
 
           <button class="play-btn" id="playBtn" title="Toggle Auto-Scroll (Space or Middle-Click)">
-            <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            <svg id="pauseIcon" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            <svg id="playIcon" viewBox="0 0 24 24" style="display:none;"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="pauseIcon" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
 
           <!-- Speed & State Cluster: [ -  1.5x  + ] -->
@@ -491,7 +491,7 @@ class WebtoonDynamicIsland {
     }, 850);
   }
 
-  // Triggers a radiant lighting flash animation on the Start / Stop icon
+  // Triggers a subtle, calm lighting breath on the Start / Stop icon
   triggerIconLighting(type) {
     const playBtn = this.shadow.querySelector('#playBtn');
     if (!playBtn) return;
@@ -509,7 +509,7 @@ class WebtoonDynamicIsland {
     this.lightingTimeout = setTimeout(() => {
       playBtn.classList.remove('light-start', 'light-stop');
       this.lightingTimeout = null;
-    }, 900);
+    }, 850);
   }
 
   setupDraggable(handle) {
@@ -681,11 +681,13 @@ class WebtoonDynamicIsland {
     if (!playIcon || !pauseIcon || !speedDisplay) return;
 
     if (state.isRunning) {
-      playIcon.style.display = 'none';
-      pauseIcon.style.display = 'block';
-    } else {
+      // Activating / Running -> Show START / Play icon (▶)
       playIcon.style.display = 'block';
       pauseIcon.style.display = 'none';
+    } else {
+      // Stopped / Paused -> Show STOP / Pause icon (❚❚)
+      playIcon.style.display = 'none';
+      pauseIcon.style.display = 'block';
     }
 
     if (!this.cardEl.matches(':hover') && !this.isDragging) {
