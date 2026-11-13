@@ -5,7 +5,7 @@
 class WebtoonScroller {
   constructor(options = {}) {
     this.cruiseSpeed = options.defaultSpeed || 1.5; // Multiplier
-    this.basePixelsPerSec = 96; // 1.0x = ~96px/sec at 60Hz (~1.6px/frame)
+    this.basePixelsPerSec = 110; // 1.0x = ~110px/sec at 60Hz (~1.8px/frame)
     this.currentSpeed = 0; // Current actual speed
     this.targetSpeed = 0; // Desired target speed
     this.isRunning = false;
@@ -26,26 +26,24 @@ class WebtoonScroller {
   }
 
   detectScrollContainer() {
-    // Check if the page has a dedicated full-height scrolling reader container
+    // Check if the page has a dedicated inner scrolling container
     const candidates = [
       document.querySelector('.viewer-container'),
       document.querySelector('#viewerContainer'),
       document.querySelector('#reader-area'),
       document.querySelector('.comic-content'),
-      document.querySelector('.chapter-content'),
-      document.scrollingElement || document.documentElement || document.body
+      document.querySelector('.chapter-content')
     ];
 
     for (const el of candidates) {
       if (el && el.scrollHeight > window.innerHeight && (el.scrollHeight > el.clientHeight)) {
         const style = window.getComputedStyle(el);
-        if (el === document.scrollingElement || el === document.documentElement || el === document.body ||
-            style.overflowY === 'auto' || style.overflowY === 'scroll') {
+        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
           return el;
         }
       }
     }
-    return document.scrollingElement || document.documentElement || document.body;
+    return null; // Null means use window/viewport scrolling directly
   }
 
   setupResizeListener() {
@@ -55,34 +53,34 @@ class WebtoonScroller {
   }
 
   getScrollTop() {
-    if (this.scrollContainer === document.body || this.scrollContainer === document.documentElement || this.scrollContainer === document.scrollingElement) {
-      return window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+    if (!this.scrollContainer) {
+      return window.scrollY || window.pageYOffset || document.documentElement.scrollTop || (document.body ? document.body.scrollTop : 0) || 0;
     }
     return this.scrollContainer.scrollTop;
   }
 
-  setScrollTop(val) {
-    if (this.scrollContainer === document.body || this.scrollContainer === document.documentElement || this.scrollContainer === document.scrollingElement) {
-      window.scrollTo(0, val);
+  scrollByPixels(pixels) {
+    if (!this.scrollContainer) {
+      window.scrollBy(0, pixels);
     } else {
-      this.scrollContainer.scrollTop = val;
+      this.scrollContainer.scrollTop += pixels;
     }
   }
 
   getMaxScroll() {
-    const el = this.scrollContainer;
-    if (el === document.body || el === document.documentElement || el === document.scrollingElement) {
-      return Math.max(
-        document.body.scrollHeight,
-        document.documentElement.scrollHeight
-      ) - window.innerHeight;
+    if (!this.scrollContainer) {
+      const docHeight = Math.max(
+        document.body ? document.body.scrollHeight : 0,
+        document.documentElement ? document.documentElement.scrollHeight : 0
+      );
+      return Math.max(0, docHeight - window.innerHeight);
     }
-    return el.scrollHeight - el.clientHeight;
+    return Math.max(0, this.scrollContainer.scrollHeight - this.scrollContainer.clientHeight);
   }
 
   getProgress() {
     const max = this.getMaxScroll();
-    if (max <= 0) return 0;
+    if (max <= 5) return 0;
     const current = this.getScrollTop();
     return Math.min(100, Math.max(0, (current / max) * 100));
   }
@@ -169,22 +167,21 @@ class WebtoonScroller {
   loop(now) {
     if (!this.isRunning) return;
 
-    const dt = Math.min(64, now - (this.lastTimestamp || now)); // cap dt to avoid huge jumps after tab pause
+    const dt = Math.min(64, now - (this.lastTimestamp || now));
     this.lastTimestamp = now;
 
-    // Smooth physics easing:
-    // When braking: snappy ease-out deceleration
-    // When accelerating: gentle ease-in ramp
-    const lerpRate = this.isBraking ? 0.22 : 0.08;
+    // Physics interpolation:
+    // When braking: rapid deceleration
+    // When accelerating: smooth ease-in
+    const lerpRate = this.isBraking ? 0.25 : 0.10;
     this.currentSpeed += (this.targetSpeed - this.currentSpeed) * lerpRate;
 
-    // If speed is practically zero while braking, keep it at 0
     if (this.isBraking && this.currentSpeed < 0.02) {
       this.currentSpeed = 0;
     }
 
     if (this.currentSpeed > 0.005) {
-      // Calculate delta pixels: (speed * baseSpeed * (dt / 1000))
+      // Delta pixels: speed * basePixelsPerSec * (dt / 1000)
       const targetDeltaPx = (this.currentSpeed * this.basePixelsPerSec * (dt / 1000));
       const totalToMove = targetDeltaPx + this.subPixelRemainder;
 
@@ -195,21 +192,17 @@ class WebtoonScroller {
         const currentScroll = this.getScrollTop();
         const maxScroll = this.getMaxScroll();
 
-        if (currentScroll >= maxScroll - 1) {
-          // Reached the bottom
+        // Only auto-stop at bottom if page actually has meaningful scroll height
+        if (maxScroll > 150 && currentScroll >= maxScroll - 4) {
           this.stop();
           return;
         }
 
-        this.setScrollTop(currentScroll + wholePixels);
+        this.scrollByPixels(wholePixels);
       }
     }
 
-    // Report progress periodically (every few frames)
-    if (Math.random() < 0.2) {
-      this.onProgressUpdate(this.getProgress());
-    }
-
+    this.onProgressUpdate(this.getProgress());
     this.animationFrameId = requestAnimationFrame((t) => this.loop(t));
   }
 }

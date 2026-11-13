@@ -3,18 +3,17 @@
  * Wires the Preloader, Physics Scroller, Clutch Controller, and Dynamic Island together.
  */
 (function() {
-  // Prevent duplicate injection
   if (window.__SCROLLTOON_INITIALIZED__) return;
   window.__SCROLLTOON_INITIALIZED__ = true;
 
   // 1. Initialize proactive preloader
   const preloader = new window.ScrollToonPreloader();
 
-  // 2. Load preferences from chrome.storage
+  // 2. Default preferences
   const defaultSettings = {
     defaultSpeed: 1.5,
+    enableLeftClickBrake: true,
     enableMiddleClickToggle: true,
-    enableRightClickClutch: true,
     enableWheelBraking: true,
     enableDoubleTapToggle: true
   };
@@ -45,10 +44,10 @@
       progress: scroller.getProgress()
     });
 
-    // 5. Initialize Clutch & Gestures
+    // 5. Initialize Clutch & Gestures (Left-Click brake, Middle-Click toggle)
     const clutch = new window.ScrollToonClutch(scroller, {
+      enableLeftClickBrake: settings.enableLeftClickBrake,
       enableMiddleClickToggle: settings.enableMiddleClickToggle,
-      enableRightClickClutch: settings.enableRightClickClutch,
       enableWheelBraking: settings.enableWheelBraking,
       enableDoubleTapToggle: settings.enableDoubleTapToggle
     });

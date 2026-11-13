@@ -1,21 +1,23 @@
 /**
  * ScrollToon - Dual Input Controller (Mouse & Trackpad Clutch)
- * Handles Middle-Click toggle, Right-Click / Margin hold clutch braking,
- * wheel friction, and keyboard shortcuts.
+ * Left-Click Hold = Clutch Brake (Hold to slow down/stop, release to resume)
+ * Middle-Click / Space = Toggle Start/Stop
+ * Wheel / Two-finger flick UP = Dynamic engine braking
  */
 class WebtoonClutch {
   constructor(scroller, options = {}) {
     this.scroller = scroller;
     this.options = {
+      enableLeftClickBrake: true,
       enableMiddleClickToggle: true,
-      enableRightClickClutch: true,
       enableWheelBraking: true,
       enableDoubleTapToggle: true,
       ...options
     };
 
-    this.rightClickTimer = null;
-    this.isRightClutchActive = false;
+    this.isLeftBrakeActive = false;
+    this.leftDownTimestamp = 0;
+    this.preventNextClick = false;
     this.lastTapTime = 0;
 
     this.init();
@@ -28,7 +30,52 @@ class WebtoonClutch {
   }
 
   bindMouseEvents() {
-    // 1. Middle Click (Button 1) Toggle
+    // 1. LEFT-CLICK HOLD = CLUTCH BRAKE PEDAL
+    window.addEventListener('mousedown', (e) => {
+      // Ignore if clicking inside our Dynamic Island
+      if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
+      if (e.button !== 0) return; // Left click only
+
+      if (this.options.enableLeftClickBrake && this.scroller.isRunning) {
+        this.leftDownTimestamp = performance.now();
+        this.isLeftBrakeActive = true;
+        this.scroller.applyClutch(true);
+      }
+    }, { capture: true });
+
+    window.addEventListener('mouseup', (e) => {
+      if (e.button !== 0) return;
+
+      if (this.isLeftBrakeActive) {
+        this.isLeftBrakeActive = false;
+        this.scroller.applyClutch(false);
+
+        // If held for more than 120ms, it was a brake action -> prevent accidental link/action triggers
+        if (performance.now() - this.leftDownTimestamp > 120) {
+          this.preventNextClick = true;
+        }
+      }
+    }, { capture: true });
+
+    // Suppress click / drag if it was a brake hold
+    window.addEventListener('click', (e) => {
+      if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
+
+      if (this.preventNextClick) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.preventNextClick = false;
+      }
+    }, { capture: true });
+
+    // Prevent text / image dragging while holding brake
+    window.addEventListener('dragstart', (e) => {
+      if (this.isLeftBrakeActive) {
+        e.preventDefault();
+      }
+    }, { capture: true });
+
+    // 2. MIDDLE CLICK (Button 1) = TOGGLE PLAY / PAUSE
     window.addEventListener('auxclick', (e) => {
       if (!this.options.enableMiddleClickToggle) return;
       if (e.button === 1) { // Middle click
@@ -38,55 +85,19 @@ class WebtoonClutch {
       }
     }, { capture: true });
 
-    // Prevent default autoscroll icon when middle-clicking
     window.addEventListener('mousedown', (e) => {
       if (e.button === 1 && this.options.enableMiddleClickToggle) {
         e.preventDefault();
       }
     }, { capture: true });
 
-    // 2. Right-Click Clutch Hold (Button 2)
-    window.addEventListener('mousedown', (e) => {
-      if (!this.options.enableRightClickClutch) return;
-      if (e.button === 2 && this.scroller.isRunning) {
-        // Start clutch timer
-        this.rightClickTimer = setTimeout(() => {
-          this.isRightClutchActive = true;
-          this.scroller.applyClutch(true);
-        }, 140);
-      }
-    }, { capture: true });
-
-    window.addEventListener('mouseup', (e) => {
-      if (e.button === 2) {
-        if (this.rightClickTimer) {
-          clearTimeout(this.rightClickTimer);
-          this.rightClickTimer = null;
-        }
-        if (this.isRightClutchActive) {
-          this.isRightClutchActive = false;
-          this.scroller.applyClutch(false);
-        }
-      }
-    }, { capture: true });
-
-    // Suppress context menu if the user was holding right click as a clutch brake
-    window.addEventListener('contextmenu', (e) => {
-      if (this.isRightClutchActive || this.rightClickTimer) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    }, { capture: true });
-
-    // 3. Double-Click in Gutters/Margins for Trackpad
+    // 3. DOUBLE-CLICK IN GUTTER / MARGIN = TOGGLE PLAY / PAUSE (Trackpad friendly)
     window.addEventListener('click', (e) => {
       if (!this.options.enableDoubleTapToggle) return;
-      // Don't trigger on links or interactive buttons
-      if (e.target.closest('a, button, input, [role="button"], #scrolltoon-host')) return;
+      if (e.target && e.target.closest && e.target.closest('a, button, input, [role="button"], #scrolltoon-host')) return;
 
       const now = performance.now();
       if (now - this.lastTapTime < 280) {
-        // Double-click detected
         this.scroller.toggle();
         this.lastTapTime = 0;
       } else {
@@ -100,21 +111,21 @@ class WebtoonClutch {
       if (!this.options.enableWheelBraking) return;
       if (!this.scroller.isRunning) return;
 
-      // Check if mouse is hovering our Dynamic Island (let island handle its own wheel events)
+      // Allow wheel on our island without braking page
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
 
       const deltaY = e.deltaY;
 
-      if (deltaY < -70) {
-        // Strong swipe UP -> User is actively looking back at previous panels -> Hard Pause
+      if (deltaY < -75) {
+        // Strong swipe UP -> User looking back at panels -> Hard Pause
         this.scroller.stop();
       } else if (deltaY < -10) {
-        // Gentle scroll UP -> Engine friction / dynamic deceleration
+        // Gentle scroll UP -> Engine friction
         e.preventDefault();
         const frictionPower = Math.min(1.2, Math.abs(deltaY) / 40);
         this.scroller.applyFriction(frictionPower);
       } else if (deltaY > 30) {
-        // Scroll DOWN -> Acceleration / turbo boost past filler
+        // Scroll DOWN -> Acceleration boost
         const boostPower = Math.min(1.5, deltaY / 60);
         this.scroller.applyBoost(boostPower);
       }
@@ -123,7 +134,6 @@ class WebtoonClutch {
 
   bindKeyboardEvents() {
     window.addEventListener('keydown', (e) => {
-      // Ignore if user is typing in an input field or comment box
       const tag = document.activeElement ? document.activeElement.tagName : '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || (document.activeElement && document.activeElement.isContentEditable)) {
         return;
@@ -135,23 +145,23 @@ class WebtoonClutch {
           this.scroller.toggle();
           break;
 
-        case 'BracketLeft': // [ slows down
+        case 'BracketLeft':
         case 'Minus':
           e.preventDefault();
           this.scroller.adjustCruiseSpeed(-0.1);
           break;
 
-        case 'BracketRight': // ] speeds up
+        case 'BracketRight':
         case 'Equal':
           e.preventDefault();
           this.scroller.adjustCruiseSpeed(0.1);
           break;
 
-        case 'KeyJ': // Vim-style J for faster
+        case 'KeyJ':
           this.scroller.adjustCruiseSpeed(0.2);
           break;
 
-        case 'KeyK': // Vim-style K for slower
+        case 'KeyK':
           this.scroller.adjustCruiseSpeed(-0.2);
           break;
 

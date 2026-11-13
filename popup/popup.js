@@ -1,15 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
   const defaultSpeedInput = document.getElementById('defaultSpeedInput');
   const speedVal = document.getElementById('speedVal');
+  const leftClickBrake = document.getElementById('leftClickBrake');
   const middleClickToggle = document.getElementById('middleClickToggle');
-  const rightClickClutch = document.getElementById('rightClickClutch');
   const wheelBraking = document.getElementById('wheelBraking');
   const doubleTapToggle = document.getElementById('doubleTapToggle');
 
   const keys = {
     defaultSpeed: 1.5,
+    enableLeftClickBrake: true,
     enableMiddleClickToggle: true,
-    enableRightClickClutch: true,
     enableWheelBraking: true,
     enableDoubleTapToggle: true
   };
@@ -18,8 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const s = stored || keys;
     defaultSpeedInput.value = s.defaultSpeed || 1.5;
     speedVal.textContent = parseFloat(defaultSpeedInput.value).toFixed(1) + 'x';
+    leftClickBrake.checked = s.enableLeftClickBrake !== false;
     middleClickToggle.checked = s.enableMiddleClickToggle !== false;
-    rightClickClutch.checked = s.enableRightClickClutch !== false;
     wheelBraking.checked = s.enableWheelBraking !== false;
     doubleTapToggle.checked = s.enableDoubleTapToggle !== false;
   });
@@ -30,12 +30,12 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.set({ defaultSpeed: parseFloat(val) });
   });
 
-  middleClickToggle.addEventListener('change', () => {
-    chrome.storage.sync.set({ enableMiddleClickToggle: middleClickToggle.checked });
+  leftClickBrake.addEventListener('change', () => {
+    chrome.storage.sync.set({ enableLeftClickBrake: leftClickBrake.checked });
   });
 
-  rightClickClutch.addEventListener('change', () => {
-    chrome.storage.sync.set({ enableRightClickClutch: rightClickClutch.checked });
+  middleClickToggle.addEventListener('change', () => {
+    chrome.storage.sync.set({ enableMiddleClickToggle: middleClickToggle.checked });
   });
 
   wheelBraking.addEventListener('change', () => {
