@@ -33,7 +33,7 @@ class WebtoonClutch {
 
   bindMouseEvents() {
     // 1. LEFT-CLICK HOLD = CLUTCH BRAKE PEDAL
-    window.addEventListener('mousedown', (e) => {
+    const onMouseDown = (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
       if (e.button !== 0) return;
 
@@ -42,9 +42,9 @@ class WebtoonClutch {
         this.isLeftBrakeActive = true;
         this.scroller.applyClutch(true);
       }
-    }, { capture: true });
+    };
 
-    window.addEventListener('mouseup', (e) => {
+    const onMouseUp = (e) => {
       if (e.button !== 0) return;
 
       if (this.isLeftBrakeActive) {
@@ -55,7 +55,10 @@ class WebtoonClutch {
           this.preventNextClick = true;
         }
       }
-    }, { capture: true });
+    };
+
+    window.addEventListener('mousedown', onMouseDown, { capture: true });
+    window.addEventListener('mouseup', onMouseUp, { capture: true });
 
     window.addEventListener('click', (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
@@ -106,7 +109,7 @@ class WebtoonClutch {
 
   // 4. TOUCHPAD TWO-FINGER SCROLL & MOUSE WHEEL
   bindWheelEvents() {
-    window.addEventListener('wheel', (e) => {
+    const handleWheel = (e) => {
       if (!this.options.enableWheelBraking) return;
       if (!this.scroller.isRunning) return;
 
@@ -115,25 +118,28 @@ class WebtoonClutch {
 
       const deltaY = e.deltaY;
 
-      // TWO FINGERS MOVING UP -> SLOW DOWN / BRAKE
-      if (deltaY < -4) {
+      // Two fingers moving UP (deltaY < 0 on macOS default Natural Scrolling)
+      if (deltaY < -1.5) {
         e.preventDefault(); // Stop native page jerk
 
-        if (deltaY < -130) {
-          // Strong deliberate flick upwards -> user is looking back at panels -> stop
+        if (deltaY < -110) {
+          // Strong swipe UP -> stop completely
           this.scroller.stop();
         } else {
-          // Responsive friction brake: drops speed smoothly
-          const brakeIntensity = Math.min(0.65, Math.abs(deltaY) / 25);
-          this.scroller.applyTwoFingerBrake(brakeIntensity);
+          // Responsive friction brake: drops speed down to crawl/pause immediately
+          this.scroller.applyTwoFingerBrake();
         }
       } 
-      // TWO FINGERS MOVING DOWN -> SPEED UP PAST FILLER
-      else if (deltaY > 25) {
-        const boostPower = Math.min(1.2, deltaY / 55);
+      // Two fingers moving DOWN -> Speed boost past filler panels
+      else if (deltaY > 20) {
+        const boostPower = Math.min(1.2, deltaY / 50);
         this.scroller.applyBoost(boostPower);
       }
-    }, { passive: false });
+    };
+
+    // Use capture: true on both window and document to intercept before page scripts
+    window.addEventListener('wheel', handleWheel, { capture: true, passive: false });
+    document.addEventListener('wheel', handleWheel, { capture: true, passive: false });
   }
 
   bindKeyboardEvents() {
