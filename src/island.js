@@ -130,20 +130,13 @@ class WebtoonDynamicIsland {
         opacity: 0.05;
         box-shadow: none;
         transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-                    background 0.3s ease,
                     box-shadow 0.4s ease;
       }
 
       /* Natural notification state in Ghost mode */
       .island-card.ghost .play-btn.notifying {
-        opacity: 0.9 !important;
-        box-shadow: 0 0 12px rgba(0, 245, 160, 0.4) !important;
-      }
-
-      .island-card.ghost .play-btn.notifying.is-stopped {
-        background: rgba(255, 255, 255, 0.22) !important;
-        color: #FFFFFF !important;
-        box-shadow: 0 0 10px rgba(255, 255, 255, 0.2) !important;
+        opacity: 0.85 !important;
+        box-shadow: 0 0 10px rgba(0, 245, 160, 0.35) !important;
       }
 
       /* Normal cruising speed text in ghost mode */
@@ -452,7 +445,7 @@ class WebtoonDynamicIsland {
   }
 
   // Triggers a calm, natural breathing notification on the Start / Stop icon
-  triggerIconLighting(type) {
+  triggerIconLighting() {
     const playBtn = this.shadow.querySelector('#playBtn');
     if (!playBtn) return;
 
@@ -460,14 +453,10 @@ class WebtoonDynamicIsland {
       clearTimeout(this.lightingTimeout);
     }
 
-    playBtn.classList.remove('is-stopped');
-    if (type === 'STOP') {
-      playBtn.classList.add('is-stopped');
-    }
     playBtn.classList.add('notifying');
 
     this.lightingTimeout = setTimeout(() => {
-      playBtn.classList.remove('notifying', 'is-stopped');
+      playBtn.classList.remove('notifying');
       this.lightingTimeout = null;
     }, 850);
   }
@@ -659,9 +648,8 @@ class WebtoonDynamicIsland {
       this.hasInitializedRunning = true;
       this.wasRunning = !!state.isRunning;
     } else if (this.wasRunning !== !!state.isRunning) {
-      const isNowRunning = !!state.isRunning;
-      this.wasRunning = isNowRunning;
-      this.triggerIconLighting(isNowRunning ? 'START' : 'STOP');
+      this.wasRunning = !!state.isRunning;
+      this.triggerIconLighting();
     }
 
     if (state.isBraking) {
