@@ -1,7 +1,8 @@
 /**
  * ScrollToon - Ultra-Minimal Proximity Ghost Dynamic Island UI
- * Zero popups in the middle of the screen.
- * All speed change feedback is subtly and elegantly reflected right on the speed component.
+ * Direct tactile key feedback:
+ * Pressing ] lights up the '+' button in glowing green.
+ * Pressing [ lights up the '-' button in glowing green.
  */
 class WebtoonDynamicIsland {
   constructor(scroller) {
@@ -166,16 +167,6 @@ class WebtoonDynamicIsland {
         transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
       }
 
-      /* Minimal Speed Up / Down Color Accents */
-      .speed-cluster.speed-up {
-        border-color: #00F5A0;
-        box-shadow: 0 0 14px rgba(0, 245, 160, 0.5);
-      }
-      .speed-cluster.speed-down {
-        border-color: #FF9F43;
-        box-shadow: 0 0 14px rgba(255, 159, 67, 0.5);
-      }
-
       .speed-cluster.slow-mode {
         border-color: rgba(255, 159, 67, 0.6);
         background: rgba(255, 159, 67, 0.12);
@@ -188,24 +179,33 @@ class WebtoonDynamicIsland {
         box-shadow: 0 0 16px rgba(255, 71, 87, 0.5);
       }
 
+      /* Tactile Backlit Step Buttons (+ and -) */
       .speed-step-btn {
         background: transparent;
         border: none;
-        color: rgba(255, 255, 255, 0.7);
+        color: rgba(255, 255, 255, 0.65);
         font-size: 14px;
         font-weight: 700;
         cursor: pointer;
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        transition: all 0.15s;
+        transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
       }
       .speed-step-btn:hover {
         background: rgba(255, 255, 255, 0.2);
         color: #FFFFFF;
+      }
+
+      /* LIGHT UP GREEN ON PRESS */
+      .speed-step-btn.lit-green {
+        background: rgba(0, 245, 160, 0.25) !important;
+        color: #00F5A0 !important;
+        box-shadow: 0 0 12px rgba(0, 245, 160, 0.7) !important;
+        transform: scale(1.18) !important;
       }
 
       /* Unified Speed Display: shows 1.5x, SLOW, or BRAKE */
@@ -218,13 +218,6 @@ class WebtoonDynamicIsland {
         text-align: center;
         cursor: ns-resize;
         transition: color 0.2s ease;
-      }
-
-      .speed-display.speed-up {
-        color: #2affb0;
-      }
-      .speed-display.speed-down {
-        color: #FFB067;
       }
 
       .speed-display.slow {
@@ -279,7 +272,7 @@ class WebtoonDynamicIsland {
     this.shadow.innerHTML = `
       <style>${this.getStyles()}</style>
 
-      <!-- Main Dynamic Island (Zero popups in the middle of the screen) -->
+      <!-- Main Dynamic Island -->
       <div class="island-wrapper" id="islandWrapper">
         <div class="island-card" id="islandCard">
           
@@ -299,11 +292,11 @@ class WebtoonDynamicIsland {
             <svg id="pauseIcon" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
 
-          <!-- Speed & State Cluster (Shows 1.5x / SLOW / BRAKE with subtle color accents) -->
+          <!-- Speed & State Cluster: [ -  1.5x  + ] -->
           <div class="speed-cluster" id="speedCluster" title="Hover & scroll wheel to adjust speed">
-            <button class="speed-step-btn" id="speedDecBtn">-</button>
+            <button class="speed-step-btn" id="speedDecBtn" title="Slow Down [-]">-</button>
             <span class="speed-display" id="speedDisplay">1.5x</span>
-            <button class="speed-step-btn" id="speedIncBtn">+</button>
+            <button class="speed-step-btn" id="speedIncBtn" title="Speed Up [+]">+</button>
           </div>
 
           <div class="reading-progress-bar">
@@ -367,29 +360,24 @@ class WebtoonDynamicIsland {
     });
   }
 
-  // Purely minimalistic color pulse directly on the speed component
+  // Lights up '+' button green on ], and '-' button green on [
   triggerSpeedFeedback(delta = 0) {
     this.wakeOpacity();
 
-    const cluster = this.shadow.querySelector('#speedCluster');
-    const display = this.shadow.querySelector('#speedDisplay');
-    if (!cluster || !display) return;
+    const speedDecBtn = this.shadow.querySelector('#speedDecBtn');
+    const speedIncBtn = this.shadow.querySelector('#speedIncBtn');
 
-    cluster.classList.remove('speed-up', 'speed-down');
-    display.classList.remove('speed-up', 'speed-down');
-
-    if (delta > 0) {
-      cluster.classList.add('speed-up');
-      display.classList.add('speed-up');
-    } else if (delta < 0) {
-      cluster.classList.add('speed-down');
-      display.classList.add('speed-down');
+    if (delta > 0 && speedIncBtn) {
+      speedIncBtn.classList.remove('lit-green');
+      void speedIncBtn.offsetWidth; // re-flow
+      speedIncBtn.classList.add('lit-green');
+      setTimeout(() => speedIncBtn.classList.remove('lit-green'), 320);
+    } else if (delta < 0 && speedDecBtn) {
+      speedDecBtn.classList.remove('lit-green');
+      void speedDecBtn.offsetWidth; // re-flow
+      speedDecBtn.classList.add('lit-green');
+      setTimeout(() => speedDecBtn.classList.remove('lit-green'), 320);
     }
-
-    setTimeout(() => {
-      cluster.classList.remove('speed-up', 'speed-down');
-      display.classList.remove('speed-up', 'speed-down');
-    }, 400);
   }
 
   setupDraggable(handle) {
