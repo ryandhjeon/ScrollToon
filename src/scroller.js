@@ -1,8 +1,9 @@
 /**
  * ScrollToon - 120Hz Sub-pixel Physics Scroll Engine
- * Uses Apple-grade exponential spring damping for super natural transitions.
+ * Uses organic exponential spring damping for super natural transitions.
  * Left-Click Hold = Hard Brake (Decelerates smoothly to 0)
  * Two-Finger Hold = Slow Glide (Glides down smoothly to ~35% speed)
+ * Releasing = Immediately and naturally accelerates back to cruising speed in ~400ms.
  */
 class WebtoonScroller {
   constructor(options = {}) {
@@ -13,8 +14,8 @@ class WebtoonScroller {
     this.isRunning = false;
 
     // States
-    this.isBraking = false;     // Hard brake (Left click hold)
-    this.isSlowedDown = false; // Slow glide (Two finger hold)
+    this.isBraking = false;     // Left click hold
+    this.isSlowedDown = false; // Two finger hold
 
     // Sub-pixel accumulator
     this.subPixelRemainder = 0;
@@ -140,11 +141,7 @@ class WebtoonScroller {
     this.isBraking = active;
     if (!this.isRunning) return;
 
-    if (active) {
-      this.targetSpeed = 0;
-    } else {
-      this.recalculateTargetSpeed();
-    }
+    this.recalculateTargetSpeed();
     this.notifyState();
   }
 
@@ -185,18 +182,18 @@ class WebtoonScroller {
     this.lastTimestamp = now;
     const dtSeconds = dt / 1000;
 
-    // Apple-grade exponential spring damping:
-    // Decelerating into slow or brake: smooth decay (lambda = 5.0)
-    // Accelerating back to cruise: gentle natural rise (lambda = 3.5)
+    // Responsive, natural exponential physics:
+    // Decelerating: lambda = 5.5 (cushioned, smooth stop in ~300ms)
+    // Accelerating back to cruise: lambda = 5.0 (naturally reaches normal cruise speed in ~400ms)
     const isDecelerating = this.targetSpeed < this.currentSpeed;
-    const lambda = isDecelerating ? 5.2 : 3.6;
+    const lambda = isDecelerating ? 5.5 : 5.0;
     const decay = Math.exp(-lambda * dtSeconds);
 
     this.currentSpeed = this.targetSpeed + (this.currentSpeed - this.targetSpeed) * decay;
 
-    // Clamp very small values
-    if (this.isBraking && this.currentSpeed < 0.02) {
-      this.currentSpeed = 0;
+    // Clean clamp near target
+    if (Math.abs(this.currentSpeed - this.targetSpeed) < 0.015) {
+      this.currentSpeed = this.targetSpeed;
     }
 
     if (this.currentSpeed > 0.005) {

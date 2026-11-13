@@ -2,7 +2,7 @@
  * ScrollToon - Dual Input Controller
  * Left-Click Hold = Hard Brake (Stops completely)
  * Two-Finger Hold (Two-finger press on trackpad) = Slow Down (Glides at ~35% speed)
- * Releasing fingers = Super natural spring ease back to cruise speed
+ * Releasing fingers = Instantly and naturally springs back to normal cruise speed
  * Scrolling up is NEVER intercepted or used as a trigger.
  */
 class WebtoonClutch {
@@ -29,13 +29,13 @@ class WebtoonClutch {
   }
 
   init() {
-    this.bindMouseEvents();
+    this.bindMouseAndPointerEvents();
     this.bindKeyboardEvents();
   }
 
-  bindMouseEvents() {
-    // 1. MOUSE / TRACKPAD PRESS EVENTS
-    const onMouseDown = (e) => {
+  bindMouseAndPointerEvents() {
+    // 1. PRESS EVENTS (mousedown & pointerdown)
+    const onDown = (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
 
       // ONE-FINGER PRESS (Left Click) -> HARD BRAKE
@@ -54,32 +54,44 @@ class WebtoonClutch {
       }
     };
 
-    const onMouseUp = (e) => {
-      // Releasing Left Click -> Release Hard Brake
-      if (e.button === 0 && this.isLeftBrakeActive) {
-        this.isLeftBrakeActive = false;
-        this.scroller.setHardBrake(false);
+    // 2. RELEASE EVENTS (mouseup & pointerup & pointercancel & blur)
+    const onUp = (e) => {
+      // Release Left-Click Hard Brake if button 0 is released or no buttons remain
+      if (this.isLeftBrakeActive) {
+        const leftStillDown = (e.buttons !== undefined) && ((e.buttons & 1) === 1);
+        if (!leftStillDown || e.button === 0 || e.type === 'blur' || e.type === 'pointercancel') {
+          this.isLeftBrakeActive = false;
+          this.scroller.setHardBrake(false);
 
-        if (performance.now() - this.leftDownTimestamp > 120) {
-          this.preventNextClick = true;
+          if (performance.now() - this.leftDownTimestamp > 120) {
+            this.preventNextClick = true;
+          }
         }
       }
 
-      // Releasing Two Fingers -> Release Slow Down
-      if (e.button === 2 && this.isTwoFingerSlowActive) {
-        this.isTwoFingerSlowActive = false;
-        this.scroller.setSlowDown(false);
+      // Release Two-Finger Slow Down if button 2 is released or no buttons remain
+      if (this.isTwoFingerSlowActive) {
+        const rightStillDown = (e.buttons !== undefined) && ((e.buttons & 2) === 2);
+        if (!rightStillDown || e.button === 2 || e.type === 'blur' || e.type === 'pointercancel') {
+          this.isTwoFingerSlowActive = false;
+          this.scroller.setSlowDown(false);
 
-        if (performance.now() - this.twoFingerDownTimestamp > 120) {
-          this.preventNextContextMenu = true;
+          if (performance.now() - this.twoFingerDownTimestamp > 120) {
+            this.preventNextContextMenu = true;
+          }
         }
       }
     };
 
-    window.addEventListener('mousedown', onMouseDown, { capture: true });
-    window.addEventListener('mouseup', onMouseUp, { capture: true });
+    window.addEventListener('mousedown', onDown, { capture: true });
+    window.addEventListener('pointerdown', onDown, { capture: true });
 
-    // Suppress native context menu when holding two fingers
+    window.addEventListener('mouseup', onUp, { capture: true });
+    window.addEventListener('pointerup', onUp, { capture: true });
+    window.addEventListener('pointercancel', onUp, { capture: true });
+    window.addEventListener('blur', onUp, { capture: true });
+
+    // Suppress context menu when using two-finger hold
     window.addEventListener('contextmenu', (e) => {
       if (this.isTwoFingerSlowActive || this.preventNextContextMenu) {
         e.preventDefault();
@@ -105,7 +117,7 @@ class WebtoonClutch {
       }
     }, { capture: true });
 
-    // 2. MIDDLE CLICK = TOGGLE PLAY / PAUSE
+    // 3. MIDDLE CLICK = TOGGLE PLAY / PAUSE
     window.addEventListener('auxclick', (e) => {
       if (!this.options.enableMiddleClickToggle) return;
       if (e.button === 1) {
@@ -121,7 +133,7 @@ class WebtoonClutch {
       }
     }, { capture: true });
 
-    // 3. DOUBLE-CLICK IN GUTTER = TOGGLE PLAY / PAUSE
+    // 4. DOUBLE-CLICK IN GUTTER = TOGGLE PLAY / PAUSE
     window.addEventListener('click', (e) => {
       if (!this.options.enableDoubleTapToggle) return;
       if (e.target && e.target.closest && e.target.closest('a, button, input, [role="button"], #scrolltoon-host')) return;
