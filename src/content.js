@@ -1,15 +1,15 @@
 /**
  * ScrollToon - Main Content Script
- * Wires Preloader, Physics Scroller, Clutch Controller, and Dynamic Island together.
- * Supports Smart Reader Detection, Master Power Switch, and Dynamic SPA Navigation.
+ * Manual Activation Architecture:
+ * - Completely dormant by default (never pops up on uninvited websites).
+ * - Turned on manually via Option+S (Alt+S) or the Chrome Extension popup.
+ * - Stays active across chapter navigations within the same tab via sessionStorage.
  */
 (function() {
   if (window.__SCROLLTOON_INITIALIZED__) return;
   window.__SCROLLTOON_INITIALIZED__ = true;
 
   const defaultSettings = {
-    enabled: true,
-    autoDetectOnly: true,
     defaultSpeed: 1.5,
     enableLeftClickBrake: true,
     enableMiddleClickToggle: true,
@@ -19,104 +19,18 @@
 
   let currentSettings = { ...defaultSettings };
   let isMounted = false;
-  let forceEnabledOnTab = false;
 
   let preloader = null;
   let scroller = null;
   let island = null;
   let clutch = null;
 
-  function isWebtoonReaderPage() {
-    const hostname = window.location.hostname;
-    const href = window.location.href;
-
-    // Immediately reject non-comic mainstream platforms
-    if (/google\.|youtube\.|github\.|amazon\.|reddit\.|twitter\.|x\.com|facebook\.|instagram\.|linkedin\.|wikipedia\.|netflix\.|apple\.com|yahoo\.|bing\./i.test(hostname)) {
-      return false;
-    }
-
-    // 1. URL Path patterns for recognized comic platforms & chapter readers
-    const readerUrlPatterns = [
-      /webtoons\.com\/.*\/viewer/i,           // Line Webtoons episode viewer
-      /comic\.naver\.com\/webtoon\/detail/i,  // Naver Webtoon episode viewer
-      /tapas\.io\/episode\//i,                // Tapas episode reader
-      /mangadex\.org\/chapter\//i,            // MangaDex chapter reader
-      /lezhin\.com\/.*\/[0-9]+/i,             // Lezhin viewer
-      /lezhinus\.com\/.*\/[0-9]+/i,
-      /\/(comic|series|manga)\/.*-(chapter|ch)-[0-9]+/i,
-      /\/chapter-[0-9]+/i,                    // Scanlation chapter readers
-      /\/ch-[0-9]+/i,
-      /demo\.html/i                           // Local test canvas
-    ];
-
-    if (readerUrlPatterns.some(regex => regex.test(href))) {
-      return true;
-    }
-
-    // 2. Specific reader DOM containers unique to comic readers
-    const readerSelectors = [
-      '#_imageList',                          // Naver/Webtoons episode image canvas
-      '#viewerBox',
-      '.viewer-box',
-      '.viewer_img',
-      '#reader-area',                         // MangaDex / WP Manga
-      '.reading-content',                     // Madara theme (Asura, Reaper, Flame, etc.)
-      '.comic-container',                     // ScrollToon test canvas
-      '.manga-reader',
-      '.ts-main-image'
-    ];
-
-    for (const sel of readerSelectors) {
-      if (document.querySelector(sel)) {
-        return true;
-      }
-    }
-
-    // 3. Strict Heuristic for unlisted scanlation / manga readers:
-    // Webtoons are continuous vertical strips of wide comic images with almost NO text paragraphs.
-    // Articles, news, blogs, and stores have many <p> tags and few wide images.
-    const paragraphs = document.querySelectorAll('p');
-    if (paragraphs.length > 15) {
-      // Standard text article, news, or blog -> NOT a webtoon reader
-      return false;
-    }
-
-    const images = document.querySelectorAll('img');
-    const scrollHeight = Math.max(
-      document.documentElement ? document.documentElement.scrollHeight : 0,
-      document.body ? document.body.scrollHeight : 0
-    );
-
-    // Must be a very long page (at least 3500px scrollable) with at least 5 images
-    if (images.length >= 5 && scrollHeight > 3500) {
-      let cumulativeComicHeight = 0;
-      let wideComicPanels = 0;
-
-      for (let i = 0; i < images.length && i < 30; i++) {
-        const img = images[i];
-        const rect = img.getBoundingClientRect();
-        const width = img.naturalWidth || rect.width || img.width || 0;
-        const height = img.naturalHeight || rect.height || img.height || 0;
-
-        // Comic panels are wide (> 350px) or tall (> 400px)
-        if (width >= 350 || height >= 400 || img.hasAttribute('data-src') || img.hasAttribute('data-original')) {
-          wideComicPanels++;
-          cumulativeComicHeight += Math.max(height, 400);
-        }
-      }
-
-      // Require at least 4 wide comic panels and > 3000px of image height
-      if (wideComicPanels >= 4 && cumulativeComicHeight >= 3000) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   function mount() {
     if (isMounted) return;
     isMounted = true;
+    try {
+      sessionStorage.setItem('scrolltoon_tab_active', 'true');
+    } catch (e) {}
 
     // 1. Initialize proactive preloader
     preloader = new window.ScrollToonPreloader();
@@ -170,6 +84,9 @@
   function unmount() {
     if (!isMounted) return;
     isMounted = false;
+    try {
+      sessionStorage.removeItem('scrolltoon_tab_active');
+    } catch (e) {}
 
     if (scroller) {
       scroller.stop();
@@ -189,99 +106,41 @@
     }
   }
 
-  function evaluate() {
-    // If master power is off, ensure unmounted
-    if (!currentSettings.enabled) {
+  function toggleTool() {
+    if (isMounted) {
       unmount();
-      return;
-    }
-
-    // If explicitly forced on for this tab, mount
-    if (forceEnabledOnTab) {
-      mount();
-      return;
-    }
-
-    // If user turned off auto-detect, mount on all pages
-    if (!currentSettings.autoDetectOnly) {
-      mount();
-      return;
-    }
-
-    // Smart Reader check
-    if (isWebtoonReaderPage()) {
-      mount();
     } else {
-      unmount();
+      mount();
     }
+    return isMounted;
   }
 
-  // Setup SPA navigation tracking (popstate & pushState/replaceState wraps)
-  window.addEventListener('popstate', () => {
-    setTimeout(evaluate, 150);
-  });
-
-  const originalPushState = history.pushState;
-  history.pushState = function() {
-    originalPushState.apply(this, arguments);
-    setTimeout(evaluate, 200);
-  };
-
-  const originalReplaceState = history.replaceState;
-  history.replaceState = function() {
-    originalReplaceState.apply(this, arguments);
-    setTimeout(evaluate, 200);
-  };
-
-  // Watch for dynamic reader injection (lazy-mounted comic containers)
-  let domCheckTimeout = null;
-  const pageObserver = new MutationObserver(() => {
-    if (isMounted) return; // Already running
-    if (domCheckTimeout) return;
-    domCheckTimeout = setTimeout(() => {
-      domCheckTimeout = null;
-      if (!isMounted && currentSettings.enabled && (currentSettings.autoDetectOnly ? isWebtoonReaderPage() : true)) {
-        mount();
+  // Keyboard shortcut: Alt + S (Option + S on Mac) to toggle on/off
+  window.addEventListener('keydown', (e) => {
+    if (e.altKey && (e.code === 'KeyS' || e.key === 's' || e.key === 'S' || e.key === 'ß')) {
+      const tag = document.activeElement ? document.activeElement.tagName : '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (document.activeElement && document.activeElement.isContentEditable)) {
+        return;
       }
-    }, 400);
-  });
+      e.preventDefault();
+      toggleTool();
+    }
+  }, { capture: true });
 
-  if (document.body) {
-    pageObserver.observe(document.body, { childList: true, subtree: true });
-  } else {
-    window.addEventListener('DOMContentLoaded', () => {
-      if (document.body) {
-        pageObserver.observe(document.body, { childList: true, subtree: true });
-      }
-      evaluate();
-    });
-  }
-
-  // Listen for messages from popup or background
+  // Listen for messages from popup
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-      if (msg.action === 'setEnabled') {
-        currentSettings.enabled = !!msg.enabled;
-        evaluate();
-        sendResponse({ status: 'ok', isMounted });
-      } else if (msg.action === 'setAutoDetectOnly') {
-        currentSettings.autoDetectOnly = !!msg.autoDetectOnly;
-        evaluate();
-        sendResponse({ status: 'ok', isMounted });
-      } else if (msg.action === 'toggleCurrentTab') {
-        forceEnabledOnTab = !isMounted;
-        evaluate();
-        sendResponse({ status: 'ok', isMounted });
+      if (msg.action === 'toggleActive') {
+        const active = toggleTool();
+        sendResponse({ isMounted: active });
       } else if (msg.action === 'getTabStatus') {
         sendResponse({
           isMounted,
-          isReader: isWebtoonReaderPage(),
           isRunning: scroller ? scroller.isRunning : false,
           speed: scroller ? scroller.cruiseSpeed : (currentSettings.defaultSpeed || 1.5)
         });
-      } else if (msg.action === 'toggle') {
-        if (!isMounted && currentSettings.enabled) {
-          forceEnabledOnTab = true;
+      } else if (msg.action === 'toggleScroll') {
+        if (!isMounted) {
           mount();
         }
         if (scroller) {
@@ -305,13 +164,19 @@
     });
   }
 
-  // Initial load from storage
+  // Load preferences from sync storage
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
     chrome.storage.sync.get(defaultSettings, (stored) => {
       currentSettings = { ...defaultSettings, ...(stored || {}) };
-      evaluate();
+      // Check if user previously activated ScrollToon for this tab's reading session
+      let wasActiveInTab = false;
+      try {
+        wasActiveInTab = sessionStorage.getItem('scrolltoon_tab_active') === 'true';
+      } catch (e) {}
+
+      if (wasActiveInTab) {
+        mount();
+      }
     });
-  } else {
-    evaluate();
   }
 })();

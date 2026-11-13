@@ -42,6 +42,7 @@
 
 | Action | Mouse | Trackpad | Keyboard |
 | :--- | :--- | :--- | :--- |
+| **Turn On / Off Tool** | Click Extension Icon &rarr; Turn On | - | <kbd>Option</kbd> + <kbd>S</kbd> (<kbd>Alt</kbd> + <kbd>S</kbd>) |
 | **Play / Pause** | **Middle-Click** anywhere | **Double-click** gutter margin | <kbd>Space</kbd> |
 | **Clutch Brake (Hold)** | **Hold Left-Click** | **Click & Hold** | - |
 | **Trackpad Scrolling** | Native | **Native 2-finger scroll** | <kbd>↑</kbd> / <kbd>↓</kbd> |
