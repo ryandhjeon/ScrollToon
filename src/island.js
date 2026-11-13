@@ -117,17 +117,33 @@ class WebtoonDynamicIsland {
         background: transparent;
       }
 
-      .island-card.ghost .play-btn {
-        box-shadow: none;
-      }
-
       .island-card.ghost .drag-handle,
-      .island-card.ghost .play-btn,
       .island-card.ghost .speed-step-btn,
       .island-card.ghost .reading-progress-bar,
       .island-card.ghost .progress-text {
         opacity: 0.05;
         transition: opacity 0.3s ease;
+      }
+
+      /* Ghost mode transition for play button */
+      .island-card.ghost .play-btn {
+        opacity: 0.05;
+        box-shadow: none;
+        transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                    background 0.3s ease,
+                    box-shadow 0.4s ease;
+      }
+
+      /* Natural notification state in Ghost mode */
+      .island-card.ghost .play-btn.notifying {
+        opacity: 0.9 !important;
+        box-shadow: 0 0 12px rgba(0, 245, 160, 0.4) !important;
+      }
+
+      .island-card.ghost .play-btn.notifying.is-stopped {
+        background: rgba(255, 255, 255, 0.22) !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.2) !important;
       }
 
       /* Normal cruising speed text in ghost mode */
@@ -195,11 +211,9 @@ class WebtoonDynamicIsland {
         display: flex;
         align-items: center;
         justify-content: center;
+        position: relative;
         cursor: pointer;
-        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                    background 0.25s ease,
-                    box-shadow 0.25s ease,
-                    opacity 0.3s ease;
+        transition: transform 0.15s ease, background 0.25s ease, box-shadow 0.25s ease;
         box-shadow: 0 0 12px rgba(0, 245, 160, 0.45);
       }
       .play-btn:hover {
@@ -214,70 +228,16 @@ class WebtoonDynamicIsland {
         width: 16px;
         height: 16px;
         fill: currentColor;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(1);
+        transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
       }
-
-      /* Minimalist Calm Breath Animation: START (Play) */
-      @keyframes calmLightingStart {
-        0% {
-          opacity: 0.05;
-          transform: scale(0.97);
-          box-shadow: none;
-        }
-        25% {
-          opacity: 0.85;
-          transform: scale(1.02);
-          box-shadow: 0 0 10px rgba(0, 245, 160, 0.35);
-        }
-        60% {
-          opacity: 0.85;
-          transform: scale(1.0);
-          box-shadow: 0 0 6px rgba(0, 245, 160, 0.2);
-        }
-        100% {
-          opacity: 0.05;
-          transform: scale(1.0);
-          box-shadow: none;
-        }
-      }
-
-      /* Minimalist Calm Breath Animation: STOP (Pause) */
-      @keyframes calmLightingStop {
-        0% {
-          opacity: 0.05;
-          transform: scale(0.97);
-          box-shadow: none;
-        }
-        25% {
-          opacity: 0.75;
-          transform: scale(1.02);
-          box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
-        }
-        60% {
-          opacity: 0.75;
-          transform: scale(1.0);
-          box-shadow: 0 0 5px rgba(255, 255, 255, 0.12);
-        }
-        100% {
-          opacity: 0.05;
-          transform: scale(1.0);
-          box-shadow: none;
-        }
-      }
-
-      .island-card.ghost .play-btn.light-start,
-      .play-btn.light-start {
-        opacity: 0.85;
-        background: #00F5A0 !important;
-        color: #0C1014 !important;
-        animation: calmLightingStart 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      }
-
-      .island-card.ghost .play-btn.light-stop,
-      .play-btn.light-stop {
-        opacity: 0.75;
-        background: rgba(255, 255, 255, 0.22) !important;
-        color: #FFFFFF !important;
-        animation: calmLightingStop 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      .play-btn svg.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, -50%) scale(0.6);
       }
 
       /* Speed Controls Cluster */
@@ -394,7 +354,7 @@ class WebtoonDynamicIsland {
           </div>
 
           <button class="play-btn" id="playBtn" title="Toggle Auto-Scroll (Space or Middle-Click)">
-            <svg id="playIcon" viewBox="0 0 24 24" style="display:none;"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="playIcon" class="hidden" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             <svg id="pauseIcon" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
 
@@ -491,7 +451,7 @@ class WebtoonDynamicIsland {
     }, 850);
   }
 
-  // Triggers a subtle, calm lighting breath on the Start / Stop icon
+  // Triggers a calm, natural breathing notification on the Start / Stop icon
   triggerIconLighting(type) {
     const playBtn = this.shadow.querySelector('#playBtn');
     if (!playBtn) return;
@@ -500,14 +460,14 @@ class WebtoonDynamicIsland {
       clearTimeout(this.lightingTimeout);
     }
 
-    playBtn.classList.remove('light-start', 'light-stop');
-    // Force DOM reflow so repeated toggles replay animation cleanly
-    void playBtn.offsetWidth;
-
-    playBtn.classList.add(type === 'START' ? 'light-start' : 'light-stop');
+    playBtn.classList.remove('is-stopped');
+    if (type === 'STOP') {
+      playBtn.classList.add('is-stopped');
+    }
+    playBtn.classList.add('notifying');
 
     this.lightingTimeout = setTimeout(() => {
-      playBtn.classList.remove('light-start', 'light-stop');
+      playBtn.classList.remove('notifying', 'is-stopped');
       this.lightingTimeout = null;
     }, 850);
   }
@@ -681,13 +641,13 @@ class WebtoonDynamicIsland {
     if (!playIcon || !pauseIcon || !speedDisplay) return;
 
     if (state.isRunning) {
-      // Activating / Running -> Show START / Play icon (▶)
-      playIcon.style.display = 'block';
-      pauseIcon.style.display = 'none';
+      // Activating / Running -> Smoothly morph to START / Play icon (▶)
+      playIcon.classList.remove('hidden');
+      pauseIcon.classList.add('hidden');
     } else {
-      // Stopped / Paused -> Show STOP / Pause icon (❚❚)
-      playIcon.style.display = 'none';
-      pauseIcon.style.display = 'block';
+      // Stopped / Paused -> Smoothly morph to STOP / Pause icon (❚❚)
+      playIcon.classList.add('hidden');
+      pauseIcon.classList.remove('hidden');
     }
 
     if (!this.cardEl.matches(':hover') && !this.isDragging) {
