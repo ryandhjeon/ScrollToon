@@ -384,8 +384,9 @@ class WebtoonDynamicIsland {
   }
 
   // Shows the updated speed in the crisp 100% solid white layer directly above the tool
+  // ONLY appears when main tool opacity is low (ghost mode)
   triggerSpeedFeedback() {
-    if (!this.aboveBadgeEl || this.scroller.isBraking) return;
+    if (!this.aboveBadgeEl || this.scroller.isBraking || !this.isGhosted) return;
 
     if (this.aboveBadgeTimeout) {
       clearTimeout(this.aboveBadgeTimeout);
@@ -404,22 +405,31 @@ class WebtoonDynamicIsland {
     }, 850);
   }
 
-  // Shows crisp 100% solid white BRAKE bubble directly above the tool while holding brake
+  // Shows crisp red BRAKE bubble directly above the tool while holding brake
+  // ONLY appears when main tool opacity is low (ghost mode)
   showBrakeBadge(active) {
     if (!this.aboveBadgeEl) return;
 
-    if (this.aboveBadgeTimeout) {
-      clearTimeout(this.aboveBadgeTimeout);
-      this.aboveBadgeTimeout = null;
-    }
-
     if (active) {
+      // Top bubble ONLY appears when main tool is in low opacity mode
+      if (!this.isGhosted) return;
+
+      if (this.aboveBadgeTimeout) {
+        clearTimeout(this.aboveBadgeTimeout);
+        this.aboveBadgeTimeout = null;
+      }
+
       this.aboveBadgeEl.textContent = 'BRAKE';
       this.aboveBadgeEl.classList.add('visible', 'brake');
     } else {
-      // Releasing brake: show resume cruise speed briefly, then smoothly fade out
+      // If the top badge was not visible (e.g. at full opacity), do not show it
+      if (!this.aboveBadgeEl.classList.contains('visible')) return;
+
       this.aboveBadgeEl.classList.remove('brake');
       this.aboveBadgeEl.textContent = this.scroller.cruiseSpeed.toFixed(1) + 'x';
+      if (this.aboveBadgeTimeout) {
+        clearTimeout(this.aboveBadgeTimeout);
+      }
       this.aboveBadgeTimeout = setTimeout(() => {
         if (!this.scroller.isBraking) {
           this.aboveBadgeEl.classList.remove('visible');
@@ -584,6 +594,10 @@ class WebtoonDynamicIsland {
       this.cardEl.classList.add('ghost');
     } else {
       this.cardEl.classList.remove('ghost');
+      // When at full opacity, top bubble must always remain hidden
+      if (this.aboveBadgeEl) {
+        this.aboveBadgeEl.classList.remove('visible', 'brake');
+      }
     }
   }
 
