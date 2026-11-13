@@ -112,6 +112,20 @@ kbd {
   color: rgba(255, 255, 255, 0.4);
 }
 
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.label kbd {
+  font-size: 9px;
+  padding: 1px 4px;
+  margin-left: 2px;
+  vertical-align: middle;
+  text-transform: none;
+}
+
 /* Speed Slider */
 .speed-picker {
   display: flex;

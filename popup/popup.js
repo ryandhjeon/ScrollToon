@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const headerDot = document.getElementById('headerDot');
   const defaultSpeedInput = document.getElementById('defaultSpeedInput');
   const speedVal = document.getElementById('speedVal');
+  const speedStepInput = document.getElementById('speedStepInput');
+  const stepVal = document.getElementById('stepVal');
   const leftClickBrake = document.getElementById('leftClickBrake');
   const middleClickToggle = document.getElementById('middleClickToggle');
   const doubleTapToggle = document.getElementById('doubleTapToggle');
@@ -11,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const defaultKeys = {
     defaultSpeed: 1.5,
+    speedStep: 0.1,
     enableLeftClickBrake: true,
     enableMiddleClickToggle: true,
     enableDoubleTapToggle: true
@@ -34,6 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const s = stored || defaultKeys;
     defaultSpeedInput.value = s.defaultSpeed || 1.5;
     speedVal.textContent = parseFloat(defaultSpeedInput.value).toFixed(1) + 'x';
+    speedStepInput.value = s.speedStep || 0.1;
+    stepVal.textContent = '±' + parseFloat(speedStepInput.value).toFixed(1) + 'x';
     leftClickBrake.checked = s.enableLeftClickBrake !== false;
     middleClickToggle.checked = s.enableMiddleClickToggle !== false;
     doubleTapToggle.checked = s.enableDoubleTapToggle !== false;
@@ -108,6 +113,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const val = parseFloat(defaultSpeedInput.value).toFixed(1);
     speedVal.textContent = val + 'x';
     chrome.storage.sync.set({ defaultSpeed: parseFloat(val) });
+  });
+
+  speedStepInput.addEventListener('input', () => {
+    const val = parseFloat(parseFloat(speedStepInput.value).toFixed(1));
+    stepVal.textContent = '±' + val.toFixed(1) + 'x';
+    chrome.storage.sync.set({ speedStep: val });
+
+    // Live update open tabs
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs[0] && tabs[0].id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: 'updateSettings',
+          settings: { speedStep: val }
+        }, () => {
+          if (chrome.runtime.lastError) {}
+        });
+      }
+    });
   });
 
   leftClickBrake.addEventListener('change', () => {

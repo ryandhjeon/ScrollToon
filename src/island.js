@@ -14,6 +14,7 @@ class WebtoonDynamicIsland {
     this.lightingTimeout = null;
     this.hasInitializedRunning = false;
     this.wasRunning = false;
+    this.speedStep = typeof options.speedStep === 'number' && options.speedStep > 0 ? options.speedStep : 0.1;
     this.isDragging = false;
     this.wasBraking = false;
 
@@ -433,12 +434,12 @@ class WebtoonDynamicIsland {
     // Speed Step
     speedDecBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.scroller.adjustCruiseSpeed(-0.1);
+      this.scroller.adjustCruiseSpeed(-this.speedStep);
       this.triggerSpeedFeedback();
     });
     speedIncBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.scroller.adjustCruiseSpeed(0.1);
+      this.scroller.adjustCruiseSpeed(this.speedStep);
       this.triggerSpeedFeedback();
     });
 
@@ -446,7 +447,7 @@ class WebtoonDynamicIsland {
     speedCluster.addEventListener('wheel', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const delta = e.deltaY < 0 ? 0.1 : -0.1;
+      const delta = e.deltaY < 0 ? this.speedStep : -this.speedStep;
       this.scroller.adjustCruiseSpeed(delta);
       this.triggerSpeedFeedback();
     }, { passive: false });
@@ -463,6 +464,12 @@ class WebtoonDynamicIsland {
     this.cardEl.addEventListener('mouseleave', () => {
       this.scheduleFade();
     });
+  }
+
+  setSpeedStep(step) {
+    if (typeof step === 'number' && !isNaN(step) && step > 0) {
+      this.speedStep = Math.round(step * 10) / 10;
+    }
   }
 
   // Highlights updated speed directly on the center speed display in crisp 100% solid white

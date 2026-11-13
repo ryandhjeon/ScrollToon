@@ -13,6 +13,7 @@
 
   const defaultSettings = {
     defaultSpeed: 1.5,
+    speedStep: 0.1,
     enableLeftClickBrake: true,
     enableMiddleClickToggle: true,
     enableDoubleTapToggle: true,
@@ -55,7 +56,8 @@
     // 3. Create Dynamic Island UI
     if (window.ScrollToonIsland && scroller) {
       island = new window.ScrollToonIsland(scroller, {
-        initialPosition: currentSettings.islandPosition
+        initialPosition: currentSettings.islandPosition,
+        speedStep: currentSettings.speedStep
       });
 
       // Initial state push
@@ -74,6 +76,7 @@
         enableLeftClickBrake: currentSettings.enableLeftClickBrake,
         enableMiddleClickToggle: currentSettings.enableMiddleClickToggle,
         enableDoubleTapToggle: currentSettings.enableDoubleTapToggle,
+        speedStep: currentSettings.speedStep,
         onSpeedChange: (delta) => {
           if (island) island.triggerSpeedFeedback(delta);
         }
@@ -161,6 +164,34 @@
       } else if (msg.action === 'resetPosition') {
         if (island) island.resetPosition();
         sendResponse({ status: 'ok' });
+      } else if (msg.action === 'updateSettings') {
+        currentSettings = { ...currentSettings, ...(msg.settings || {}) };
+        if (msg.settings && msg.settings.speedStep !== undefined) {
+          if (clutch) clutch.setSpeedStep(msg.settings.speedStep);
+          if (island) island.setSpeedStep(msg.settings.speedStep);
+        }
+        sendResponse({ status: 'ok' });
+      }
+    });
+  }
+
+  // Live update preferences when storage changes
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'sync') {
+        for (const [key, { newValue }] of Object.entries(changes)) {
+          currentSettings[key] = newValue;
+          if (key === 'speedStep') {
+            if (clutch) clutch.setSpeedStep(newValue);
+            if (island) island.setSpeedStep(newValue);
+          } else if (key === 'enableLeftClickBrake' && clutch) {
+            clutch.options.enableLeftClickBrake = newValue;
+          } else if (key === 'enableMiddleClickToggle' && clutch) {
+            clutch.options.enableMiddleClickToggle = newValue;
+          } else if (key === 'enableDoubleTapToggle' && clutch) {
+            clutch.options.enableDoubleTapToggle = newValue;
+          }
+        }
       }
     });
   }

@@ -17,6 +17,7 @@ class WebtoonClutch {
       ...options
     };
 
+    this.speedStep = typeof options.speedStep === 'number' && options.speedStep > 0 ? options.speedStep : 0.1;
     this.isLeftBrakeActive = false;
     this.leftDownTimestamp = 0;
     this.preventNextClick = false;
@@ -127,6 +128,12 @@ class WebtoonClutch {
     window.addEventListener('click', this.onDoubleTapClick);
   }
 
+  setSpeedStep(step) {
+    if (typeof step === 'number' && !isNaN(step) && step > 0) {
+      this.speedStep = Math.round(step * 10) / 10;
+    }
+  }
+
   bindKeyboardEvents() {
     this.onKeyDown = (e) => {
       const tag = document.activeElement ? document.activeElement.tagName : '';
@@ -143,15 +150,15 @@ class WebtoonClutch {
         case 'BracketLeft':
         case 'Minus':
           e.preventDefault();
-          this.scroller.adjustCruiseSpeed(-0.1);
-          if (this.options.onSpeedChange) this.options.onSpeedChange(-0.1);
+          this.scroller.adjustCruiseSpeed(-this.speedStep);
+          if (this.options.onSpeedChange) this.options.onSpeedChange(-this.speedStep);
           break;
 
         case 'BracketRight':
         case 'Equal':
           e.preventDefault();
-          this.scroller.adjustCruiseSpeed(0.1);
-          if (this.options.onSpeedChange) this.options.onSpeedChange(0.1);
+          this.scroller.adjustCruiseSpeed(this.speedStep);
+          if (this.options.onSpeedChange) this.options.onSpeedChange(this.speedStep);
           break;
 
         case 'KeyJ':
