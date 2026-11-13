@@ -1,6 +1,6 @@
 # ScrollToon
 
-ScrollToon is a Chrome extension that scrolls webtoons and manga for you.
+ScrollToon is a Chrome extension that scrolls webtoons for you.
 
 ---
 

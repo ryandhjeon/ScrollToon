@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ScrollToon - Webtoon Scroller Chrome Extension",
   "version": "1.2.0",
-  "description": "Butter-smooth 120Hz autoscroller with Dynamic Island UI, clutch braking, and lazy-load acceleration for webtoons and manga.",
+  "description": "Butter-smooth 120Hz autoscroller with Dynamic Island UI, clutch braking, and lazy-load acceleration for webtoons.",
   "permissions": [
     "storage",
     "activeTab",

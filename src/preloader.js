@@ -1,6 +1,6 @@
 /**
  * ScrollToon - Predictive Image Preloader
- * Eliminates blank white spaces on webtoons/manga during fast scrolling.
+ * Eliminates blank white spaces on webtoons during fast scrolling.
  */
 class WebtoonPreloader {
   constructor() {
