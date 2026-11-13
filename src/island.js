@@ -1,6 +1,7 @@
 /**
  * ScrollToon - Ultra-Minimal Proximity Ghost Dynamic Island UI
- * Pure, clean, static speed display. Zero animations, zero rolls, zero popups.
+ * In low opacity, pressing [ or ] shows the updated speed in crisp white
+ * in the middle of the tool, while keeping the rest of the tool fully ghosted.
  */
 class WebtoonDynamicIsland {
   constructor(scroller) {
@@ -8,6 +9,7 @@ class WebtoonDynamicIsland {
     this.isGhosted = false;
     this.proximityThresholdPx = 140;
     this.fadeIdleTimeout = null;
+    this.whiteSpeedTimeout = null;
     this.isDragging = false;
 
     this.host = null;
@@ -199,7 +201,7 @@ class WebtoonDynamicIsland {
         color: #FFFFFF;
       }
 
-      /* Clean, Static Speed Display */
+      /* Speed Display in the Middle */
       .speed-display {
         font-size: 13px;
         font-weight: 700;
@@ -208,6 +210,13 @@ class WebtoonDynamicIsland {
         min-width: 44px;
         text-align: center;
         cursor: ns-resize;
+        transition: color 0.25s ease;
+      }
+
+      /* Crisp white highlight in the middle on [ or ] press */
+      .speed-display.white-glow {
+        color: #FFFFFF !important;
+        font-weight: 800;
       }
 
       .speed-display.slow {
@@ -316,10 +325,12 @@ class WebtoonDynamicIsland {
     speedDecBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.scroller.adjustCruiseSpeed(-0.1);
+      this.triggerSpeedFeedback();
     });
     speedIncBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.scroller.adjustCruiseSpeed(0.1);
+      this.triggerSpeedFeedback();
     });
 
     // Wheel over speed cluster to dial speed
@@ -328,6 +339,7 @@ class WebtoonDynamicIsland {
       e.stopPropagation();
       const delta = e.deltaY < 0 ? 0.1 : -0.1;
       this.scroller.adjustCruiseSpeed(delta);
+      this.triggerSpeedFeedback();
     }, { passive: false });
 
     // Dragging
@@ -346,9 +358,23 @@ class WebtoonDynamicIsland {
     });
   }
 
-  // Purely updates the value cleanly with zero animation/effects
+  // Puts the speed number in crisp clean white in the middle of the tool
+  // WITHOUT waking up the rest of the tool's low opacity
   triggerSpeedFeedback() {
-    // No-op: clean static text update
+    const display = this.shadow.querySelector('#speedDisplay');
+    if (!display) return;
+
+    display.classList.add('white-glow');
+
+    if (this.whiteSpeedTimeout) {
+      clearTimeout(this.whiteSpeedTimeout);
+    }
+
+    // Keep clean white for 800ms, then smoothly fade back
+    this.whiteSpeedTimeout = setTimeout(() => {
+      display.classList.remove('white-glow');
+      this.whiteSpeedTimeout = null;
+    }, 800);
   }
 
   setupDraggable(handle) {
@@ -470,7 +496,12 @@ class WebtoonDynamicIsland {
     } else {
       const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
       speedDisplay.textContent = formattedSpeed;
-      speedDisplay.className = 'speed-display';
+      // Preserve white highlight if active
+      if (this.whiteSpeedTimeout) {
+        speedDisplay.className = 'speed-display white-glow';
+      } else {
+        speedDisplay.className = 'speed-display';
+      }
       if (speedCluster) speedCluster.className = 'speed-cluster';
     }
 
