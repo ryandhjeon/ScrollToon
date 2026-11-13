@@ -1,13 +1,15 @@
 /**
- * ScrollToon - Morphing Dynamic Island UI
+ * ScrollToon - Proximity Ghost Dynamic Island UI
  * Renders inside a Shadow DOM for total style isolation.
- * Morphs between an interactive control bar and a 38px frosted glass bead.
+ * Remains a sleek horizontal control bar that fades to low opacity during cruising,
+ * and seamlessly restores full opacity as your cursor approaches.
  */
 class WebtoonDynamicIsland {
   constructor(scroller) {
     this.scroller = scroller;
-    this.isExpanded = true;
-    this.autoCollapseTimeout = null;
+    this.isGhosted = false;
+    this.proximityThresholdPx = 140; // Cursor distance to wake up full opacity
+    this.fadeIdleTimeout = null;
     this.isDragging = false;
 
     this.host = null;
@@ -21,7 +23,7 @@ class WebtoonDynamicIsland {
     this.createShadowHost();
     this.render();
     this.bindEvents();
-    this.setupAutoCollapse();
+    this.setupProximityWatcher();
   }
 
   createShadowHost() {
@@ -66,30 +68,43 @@ class WebtoonDynamicIsland {
 
       .island-wrapper {
         position: fixed;
-        bottom: 28px;
+        bottom: 24px;
         left: 50%;
         transform: translateX(-50%);
         pointer-events: auto;
-        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                    opacity 0.25s ease;
+        opacity: 1;
+        transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
-      /* Liquid Frosted Glass Shell */
+      /* Ghost mode: fades down while reading hands-free */
+      .island-wrapper.ghost {
+        opacity: 0.16;
+      }
+
+      /* Direct hover always forces 100% clarity */
+      .island-wrapper:hover {
+        opacity: 1 !important;
+      }
+
+      /* Frosted Glass Pill */
       .island-card {
-        background: rgba(18, 22, 28, 0.78);
+        background: rgba(16, 20, 26, 0.78);
         backdrop-filter: blur(24px) saturate(190%);
         -webkit-backdrop-filter: blur(24px) saturate(190%);
         border: 1px solid rgba(255, 255, 255, 0.18);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 
-                    0 2px 8px rgba(0, 0, 0, 0.3),
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), 
+                    0 2px 8px rgba(0, 0, 0, 0.25),
                     inset 0 1px 0 rgba(255, 255, 255, 0.25);
         border-radius: 9999px;
         color: #FFFFFF;
         display: flex;
         align-items: center;
-        overflow: hidden;
+        gap: 12px;
+        padding: 6px 14px;
+        height: 48px;
         cursor: default;
-        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
       }
 
       .island-card:hover {
@@ -99,29 +114,23 @@ class WebtoonDynamicIsland {
                     inset 0 1px 0 rgba(255, 255, 255, 0.35);
       }
 
-      /* EXPANDED STATE */
-      .island-wrapper.expanded .island-card {
-        padding: 6px 14px;
-        gap: 12px;
-        height: 50px;
-      }
-
+      /* Drag handle */
       .drag-handle {
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: grab;
-        opacity: 0.45;
-        transition: opacity 0.2s;
-        padding: 0 4px;
+        opacity: 0.4;
+        transition: opacity 0.15s;
+        padding: 0 3px;
       }
       .drag-handle:hover { opacity: 0.9; }
       .drag-handle:active { cursor: grabbing; }
 
       /* Play / Pause Toggle Button */
       .play-btn {
-        width: 36px;
-        height: 36px;
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
         border: none;
         background: #00F5A0;
@@ -131,19 +140,19 @@ class WebtoonDynamicIsland {
         justify-content: center;
         cursor: pointer;
         transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
-        box-shadow: 0 0 14px rgba(0, 245, 160, 0.5);
+        box-shadow: 0 0 12px rgba(0, 245, 160, 0.45);
       }
       .play-btn:hover {
         transform: scale(1.08);
         background: #2affb0;
-        box-shadow: 0 0 20px rgba(0, 245, 160, 0.75);
+        box-shadow: 0 0 18px rgba(0, 245, 160, 0.7);
       }
       .play-btn:active {
         transform: scale(0.92);
       }
       .play-btn svg {
-        width: 17px;
-        height: 17px;
+        width: 16px;
+        height: 16px;
         fill: currentColor;
       }
 
@@ -153,7 +162,7 @@ class WebtoonDynamicIsland {
         align-items: center;
         gap: 6px;
         background: rgba(255, 255, 255, 0.08);
-        padding: 4px 8px;
+        padding: 3px 8px;
         border-radius: 9999px;
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
@@ -162,7 +171,7 @@ class WebtoonDynamicIsland {
         background: transparent;
         border: none;
         color: rgba(255, 255, 255, 0.7);
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 700;
         cursor: pointer;
         width: 20px;
@@ -235,11 +244,11 @@ class WebtoonDynamicIsland {
       .progress-text {
         font-size: 11px;
         font-weight: 600;
-        color: rgba(255, 255, 255, 0.5);
+        color: rgba(255, 255, 255, 0.55);
         min-width: 28px;
       }
 
-      /* Brake status indicator badge */
+      /* Clutch / Brake Status Indicator */
       .brake-badge {
         font-size: 10px;
         font-weight: 700;
@@ -250,78 +259,15 @@ class WebtoonDynamicIsland {
         padding: 2px 7px;
         border-radius: 9999px;
         display: none;
-        animation: pulse 1s infinite alternate ease-in-out;
+        animation: pulse 0.9s infinite alternate ease-in-out;
       }
       .brake-badge.active {
         display: inline-block;
       }
 
       @keyframes pulse {
-        from { opacity: 0.7; transform: scale(0.96); }
-        to { opacity: 1; transform: scale(1.04); }
-      }
-
-      /* COLLAPSED BEAD STATE */
-      .island-wrapper.collapsed .island-card {
-        width: 44px;
-        height: 44px;
-        padding: 0;
-        justify-content: center;
-        cursor: pointer;
-        background: rgba(18, 22, 28, 0.88);
-      }
-
-      .island-wrapper.collapsed .expanded-content {
-        display: none;
-      }
-
-      .bead-content {
-        display: none;
-        position: relative;
-        width: 100%;
-        height: 100%;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .island-wrapper.collapsed .bead-content {
-        display: flex;
-      }
-
-      .bead-ring-svg {
-        position: absolute;
-        inset: 2px;
-        width: 40px;
-        height: 40px;
-        transform: rotate(-90deg);
-      }
-      .bead-ring-bg {
-        stroke: rgba(255, 255, 255, 0.12);
-        stroke-width: 2.5;
-        fill: none;
-      }
-      .bead-ring-val {
-        stroke: #00F5A0;
-        stroke-width: 2.5;
-        stroke-linecap: round;
-        fill: none;
-        stroke-dasharray: 100;
-        stroke-dashoffset: 100;
-        transition: stroke-dashoffset 0.15s ease;
-      }
-
-      .bead-speed-text {
-        font-size: 11px;
-        font-weight: 800;
-        color: #FFFFFF;
-        letter-spacing: -0.5px;
-        z-index: 2;
-      }
-
-      /* Clutch alert ring when collapsed */
-      .island-wrapper.collapsed.braking .island-card {
-        box-shadow: 0 0 16px rgba(255, 71, 87, 0.8);
-        border-color: #FF4757;
+        from { opacity: 0.75; transform: scale(0.97); }
+        to { opacity: 1; transform: scale(1.03); }
       }
     `;
   }
@@ -329,57 +275,44 @@ class WebtoonDynamicIsland {
   render() {
     this.shadow.innerHTML = `
       <style>${this.getStyles()}</style>
-      <div class="island-wrapper expanded" id="islandWrapper">
+      <div class="island-wrapper" id="islandWrapper">
         <div class="island-card" id="islandCard">
           
-          <!-- Expanded Mode Content -->
-          <div class="expanded-content" style="display: flex; align-items: center; gap: 10px;">
-            <div class="drag-handle" id="dragHandle" title="Drag to reposition">
-              <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
-                <circle cx="2" cy="2" r="1.5"/>
-                <circle cx="8" cy="2" r="1.5"/>
-                <circle cx="2" cy="8" r="1.5"/>
-                <circle cx="8" cy="8" r="1.5"/>
-                <circle cx="2" cy="14" r="1.5"/>
-                <circle cx="8" cy="14" r="1.5"/>
-              </svg>
-            </div>
-
-            <button class="play-btn" id="playBtn" title="Toggle Auto-Scroll (Space or Middle-Click)">
-              <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-              <svg id="pauseIcon" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-            </button>
-
-            <div class="speed-cluster" id="speedCluster" title="Hover & scroll wheel to adjust speed">
-              <button class="speed-step-btn" id="speedDecBtn">-</button>
-              <span class="speed-display" id="speedDisplay">1.5x</span>
-              <button class="speed-step-btn" id="speedIncBtn">+</button>
-            </div>
-
-            <div class="presets">
-              <button class="preset-chip" data-speed="1.0">1.0x</button>
-              <button class="preset-chip active" data-speed="1.5">1.5x</button>
-              <button class="preset-chip" data-speed="2.0">2.0x</button>
-              <button class="preset-chip" data-speed="3.0">3.0x</button>
-            </div>
-
-            <div class="reading-progress-bar">
-              <div class="progress-fill" id="progressFill"></div>
-            </div>
-            <span class="progress-text" id="progressText">0%</span>
-
-            <span class="brake-badge" id="brakeBadge">CLUTCH</span>
-          </div>
-
-          <!-- Collapsed Bead Content -->
-          <div class="bead-content" id="beadContent" title="Click to expand controls">
-            <svg class="bead-ring-svg" viewBox="0 0 36 36">
-              <path class="bead-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-              <path class="bead-ring-val" id="beadRingVal" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <div class="drag-handle" id="dragHandle" title="Drag to reposition">
+            <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
+              <circle cx="2" cy="2" r="1.5"/>
+              <circle cx="8" cy="2" r="1.5"/>
+              <circle cx="2" cy="8" r="1.5"/>
+              <circle cx="8" cy="8" r="1.5"/>
+              <circle cx="2" cy="14" r="1.5"/>
+              <circle cx="8" cy="14" r="1.5"/>
             </svg>
-            <span class="bead-speed-text" id="beadSpeedText">1.5</span>
           </div>
 
+          <button class="play-btn" id="playBtn" title="Toggle Auto-Scroll (Space or Middle-Click)">
+            <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="pauseIcon" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+
+          <div class="speed-cluster" id="speedCluster" title="Hover & scroll wheel to adjust speed">
+            <button class="speed-step-btn" id="speedDecBtn">-</button>
+            <span class="speed-display" id="speedDisplay">1.5x</span>
+            <button class="speed-step-btn" id="speedIncBtn">+</button>
+          </div>
+
+          <div class="presets">
+            <button class="preset-chip" data-speed="1.0">1.0x</button>
+            <button class="preset-chip active" data-speed="1.5">1.5x</button>
+            <button class="preset-chip" data-speed="2.0">2.0x</button>
+            <button class="preset-chip" data-speed="3.0">3.0x</button>
+          </div>
+
+          <div class="reading-progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <span class="progress-text" id="progressText">0%</span>
+
+          <span class="brake-badge" id="brakeBadge">BRAKE</span>
         </div>
       </div>
     `;
@@ -393,7 +326,6 @@ class WebtoonDynamicIsland {
     const speedIncBtn = this.shadow.querySelector('#speedIncBtn');
     const speedCluster = this.shadow.querySelector('#speedCluster');
     const presets = this.shadow.querySelectorAll('.preset-chip');
-    const beadContent = this.shadow.querySelector('#beadContent');
     const dragHandle = this.shadow.querySelector('#dragHandle');
 
     // Play/Pause
@@ -406,12 +338,12 @@ class WebtoonDynamicIsland {
     speedDecBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.scroller.adjustCruiseSpeed(-0.1);
-      this.resetAutoCollapse();
+      this.wakeOpacity();
     });
     speedIncBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.scroller.adjustCruiseSpeed(0.1);
-      this.resetAutoCollapse();
+      this.wakeOpacity();
     });
 
     // Wheel over speed cluster to dial speed
@@ -420,7 +352,7 @@ class WebtoonDynamicIsland {
       e.stopPropagation();
       const delta = e.deltaY < 0 ? 0.1 : -0.1;
       this.scroller.adjustCruiseSpeed(delta);
-      this.resetAutoCollapse();
+      this.wakeOpacity();
     }, { passive: false });
 
     // Preset buttons
@@ -429,30 +361,22 @@ class WebtoonDynamicIsland {
         e.stopPropagation();
         const speed = parseFloat(btn.getAttribute('data-speed'));
         this.scroller.setCruiseSpeed(speed);
-        this.resetAutoCollapse();
+        this.wakeOpacity();
       });
-    });
-
-    // Clicking collapsed bead restores expanded island
-    beadContent.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.expand();
     });
 
     // Dragging
     this.setupDraggable(dragHandle);
 
-    // Expand on hover
+    // Direct hover on island forces full opacity
     this.islandEl.addEventListener('mouseenter', () => {
-      if (!this.isExpanded) {
-        this.expand();
-      }
-      this.clearAutoCollapse();
+      this.clearFadeTimer();
+      this.setGhost(false);
     });
 
     this.islandEl.addEventListener('mouseleave', () => {
       if (this.scroller.isRunning) {
-        this.scheduleAutoCollapse();
+        this.scheduleFade();
       }
     });
   }
@@ -496,54 +420,64 @@ class WebtoonDynamicIsland {
     handle.addEventListener('mousedown', onMouseDown);
   }
 
-  setupAutoCollapse() {
-    window.addEventListener('mousemove', () => {
-      if (this.scroller.isRunning && !this.isExpanded) {
-        this.resetAutoCollapse();
+  // Watches cursor distance to the island
+  setupProximityWatcher() {
+    window.addEventListener('mousemove', (e) => {
+      if (!this.islandEl || this.isDragging) return;
+
+      const rect = this.islandEl.getBoundingClientRect();
+      // Calculate distance between mouse and island box
+      const dx = Math.max(rect.left - e.clientX, 0, e.clientX - rect.right);
+      const dy = Math.max(rect.top - e.clientY, 0, e.clientY - rect.bottom);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < this.proximityThresholdPx) {
+        // Cursor is close -> full opacity
+        this.wakeOpacity();
+      } else if (this.scroller.isRunning && !this.isGhosted) {
+        // Cursor is far away while running -> schedule ghost fade
+        this.scheduleFade();
       }
     }, { passive: true });
   }
 
-  scheduleAutoCollapse() {
-    this.clearAutoCollapse();
-    this.autoCollapseTimeout = setTimeout(() => {
+  wakeOpacity() {
+    this.clearFadeTimer();
+    this.setGhost(false);
+    if (this.scroller.isRunning) {
+      this.scheduleFade();
+    }
+  }
+
+  scheduleFade() {
+    this.clearFadeTimer();
+    this.fadeIdleTimeout = setTimeout(() => {
       if (this.scroller.isRunning && !this.isDragging) {
-        this.collapse();
+        this.setGhost(true);
       }
-    }, 2400);
+    }, 1800);
   }
 
-  clearAutoCollapse() {
-    if (this.autoCollapseTimeout) {
-      clearTimeout(this.autoCollapseTimeout);
-      this.autoCollapseTimeout = null;
+  clearFadeTimer() {
+    if (this.fadeIdleTimeout) {
+      clearTimeout(this.fadeIdleTimeout);
+      this.fadeIdleTimeout = null;
     }
   }
 
-  resetAutoCollapse() {
-    if (!this.isExpanded) {
-      this.expand();
+  setGhost(ghost) {
+    this.isGhosted = ghost;
+    if (ghost) {
+      this.islandEl.classList.add('ghost');
+    } else {
+      this.islandEl.classList.remove('ghost');
     }
-    this.scheduleAutoCollapse();
-  }
-
-  collapse() {
-    this.isExpanded = false;
-    this.islandEl.classList.remove('expanded');
-    this.islandEl.classList.add('collapsed');
-  }
-
-  expand() {
-    this.isExpanded = true;
-    this.islandEl.classList.remove('collapsed');
-    this.islandEl.classList.add('expanded');
   }
 
   updateState(state) {
     const playIcon = this.shadow.querySelector('#playIcon');
     const pauseIcon = this.shadow.querySelector('#pauseIcon');
     const speedDisplay = this.shadow.querySelector('#speedDisplay');
-    const beadSpeedText = this.shadow.querySelector('#beadSpeedText');
     const brakeBadge = this.shadow.querySelector('#brakeBadge');
     const presets = this.shadow.querySelectorAll('.preset-chip');
 
@@ -553,18 +487,17 @@ class WebtoonDynamicIsland {
     if (state.isRunning) {
       playIcon.style.display = 'none';
       pauseIcon.style.display = 'block';
-      this.scheduleAutoCollapse();
+      this.scheduleFade();
     } else {
       playIcon.style.display = 'block';
       pauseIcon.style.display = 'none';
-      this.expand();
-      this.clearAutoCollapse();
+      this.clearFadeTimer();
+      this.setGhost(false); // Always full opacity when stopped
     }
 
     // Speed display
     const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
     speedDisplay.textContent = formattedSpeed;
-    beadSpeedText.textContent = state.cruiseSpeed.toFixed(1);
 
     // Highlight active preset chip if matches
     presets.forEach(p => {
@@ -578,10 +511,9 @@ class WebtoonDynamicIsland {
     // Brake status
     if (state.isBraking) {
       brakeBadge.classList.add('active');
-      this.islandEl.classList.add('braking');
+      this.setGhost(false); // Instantly brighten when braking
     } else {
       brakeBadge.classList.remove('active');
-      this.islandEl.classList.remove('braking');
     }
 
     this.updateProgress(state.progress);
@@ -590,16 +522,10 @@ class WebtoonDynamicIsland {
   updateProgress(pct) {
     const progressFill = this.shadow.querySelector('#progressFill');
     const progressText = this.shadow.querySelector('#progressText');
-    const beadRingVal = this.shadow.querySelector('#beadRingVal');
 
     const rounded = Math.round(pct);
     if (progressFill) progressFill.style.width = `${rounded}%`;
     if (progressText) progressText.textContent = `${rounded}%`;
-
-    if (beadRingVal) {
-      const offset = 100 - rounded;
-      beadRingVal.style.strokeDashoffset = offset;
-    }
   }
 }
 
