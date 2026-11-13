@@ -1,15 +1,18 @@
 /**
  * ScrollToon - 120Hz Sub-pixel Physics Scroll Engine
- * Uses float accumulation + spring interpolation for buttery smooth movement.
+ * Uses float accumulation + spring interpolation with responsive friction braking.
  */
 class WebtoonScroller {
   constructor(options = {}) {
-    this.cruiseSpeed = options.defaultSpeed || 1.5; // Multiplier
-    this.basePixelsPerSec = 110; // 1.0x = ~110px/sec at 60Hz (~1.8px/frame)
-    this.currentSpeed = 0; // Current actual speed
-    this.targetSpeed = 0; // Desired target speed
+    this.cruiseSpeed = options.defaultSpeed || 1.5;
+    this.basePixelsPerSec = 110;
+    this.currentSpeed = 0;
+    this.targetSpeed = 0;
     this.isRunning = false;
-    this.isBraking = false; // Clutch or engine brake engaged
+    this.isBraking = false; // Clutch or two-finger friction brake engaged
+
+    // Recovery timer for dynamic touchpad friction
+    this.frictionTimer = null;
 
     // Sub-pixel accumulator
     this.subPixelRemainder = 0;
@@ -26,7 +29,6 @@ class WebtoonScroller {
   }
 
   detectScrollContainer() {
-    // Check if the page has a dedicated inner scrolling container
     const candidates = [
       document.querySelector('.viewer-container'),
       document.querySelector('#viewerContainer'),
@@ -43,7 +45,7 @@ class WebtoonScroller {
         }
       }
     }
-    return null; // Null means use window/viewport scrolling directly
+    return null;
   }
 
   setupResizeListener() {
@@ -102,6 +104,10 @@ class WebtoonScroller {
     this.targetSpeed = 0;
     this.currentSpeed = 0;
     this.subPixelRemainder = 0;
+    if (this.frictionTimer) {
+      clearTimeout(this.frictionTimer);
+      this.frictionTimer = null;
+    }
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
@@ -129,8 +135,13 @@ class WebtoonScroller {
     this.setCruiseSpeed(this.cruiseSpeed + delta);
   }
 
-  // Engage clutch / brake: smoothly drop target speed to 0 without canceling the running state
+  // Engage clutch / brake: smoothly drop target speed to 0
   applyClutch(engaged) {
+    if (this.frictionTimer) {
+      clearTimeout(this.frictionTimer);
+      this.frictionTimer = null;
+    }
+
     this.isBraking = engaged;
     if (!this.isRunning) return;
 
@@ -142,16 +153,37 @@ class WebtoonScroller {
     this.notifyState();
   }
 
-  // Engine braking by friction (e.g. from reverse scroll flick)
-  applyFriction(amount = 0.5) {
+  // Two-Finger Touchpad Friction Braking
+  applyTwoFingerBrake(brakeAmount = 0.4) {
     if (!this.isRunning) return;
-    this.currentSpeed = Math.max(0, this.currentSpeed - amount);
+
+    this.isBraking = true;
+    // Drop both target speed and current speed proportionally
+    this.targetSpeed = Math.max(0, this.targetSpeed - brakeAmount);
+    this.currentSpeed = Math.max(0, this.currentSpeed - (brakeAmount * 0.8));
+
+    this.notifyState();
+
+    // Reset recovery timer: hold the brake while two fingers are dragging up,
+    // then smoothly ease back to cruising speed 600ms after fingers stop
+    if (this.frictionTimer) {
+      clearTimeout(this.frictionTimer);
+    }
+
+    this.frictionTimer = setTimeout(() => {
+      if (this.isRunning && this.isBraking) {
+        this.isBraking = false;
+        this.targetSpeed = this.cruiseSpeed;
+        this.notifyState();
+      }
+      this.frictionTimer = null;
+    }, 550);
   }
 
-  // Boost speed temporarily (e.g. forward wheel flick)
-  applyBoost(amount = 0.5) {
-    if (!this.isRunning) return;
-    this.currentSpeed = Math.min(this.cruiseSpeed * 2.5, this.currentSpeed + amount);
+  // Forward scroll boost
+  applyBoost(amount = 0.4) {
+    if (!this.isRunning || this.isBraking) return;
+    this.currentSpeed = Math.min(this.cruiseSpeed * 2.2, this.currentSpeed + amount);
   }
 
   notifyState() {
@@ -171,9 +203,9 @@ class WebtoonScroller {
     this.lastTimestamp = now;
 
     // Physics interpolation:
-    // When braking: rapid deceleration
-    // When accelerating: smooth ease-in
-    const lerpRate = this.isBraking ? 0.25 : 0.10;
+    // When braking: rapid deceleration curve
+    // When accelerating: gentle ease-in ramp
+    const lerpRate = this.isBraking ? 0.22 : 0.09;
     this.currentSpeed += (this.targetSpeed - this.currentSpeed) * lerpRate;
 
     if (this.isBraking && this.currentSpeed < 0.02) {
@@ -181,7 +213,6 @@ class WebtoonScroller {
     }
 
     if (this.currentSpeed > 0.005) {
-      // Delta pixels: speed * basePixelsPerSec * (dt / 1000)
       const targetDeltaPx = (this.currentSpeed * this.basePixelsPerSec * (dt / 1000));
       const totalToMove = targetDeltaPx + this.subPixelRemainder;
 
@@ -192,7 +223,6 @@ class WebtoonScroller {
         const currentScroll = this.getScrollTop();
         const maxScroll = this.getMaxScroll();
 
-        // Only auto-stop at bottom if page actually has meaningful scroll height
         if (maxScroll > 150 && currentScroll >= maxScroll - 4) {
           this.stop();
           return;

@@ -1,6 +1,7 @@
 /**
  * ScrollToon - Dual Input Controller (Mouse & Trackpad Clutch)
  * Left-Click Hold = Clutch Brake
+ * Touchpad Two-Finger Counter-Scroll = Dynamic Friction Brake (slow down / stop)
  * Middle-Click / Space = Toggle Start/Stop
  * [ / ] = Speed adjustment with HUD feedback
  */
@@ -103,23 +104,33 @@ class WebtoonClutch {
     });
   }
 
+  // 4. TOUCHPAD TWO-FINGER SCROLL & MOUSE WHEEL
   bindWheelEvents() {
     window.addEventListener('wheel', (e) => {
       if (!this.options.enableWheelBraking) return;
       if (!this.scroller.isRunning) return;
 
+      // Allow wheel adjustments directly on the Island without braking
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
 
       const deltaY = e.deltaY;
 
-      if (deltaY < -75) {
-        this.scroller.stop();
-      } else if (deltaY < -10) {
-        e.preventDefault();
-        const frictionPower = Math.min(1.2, Math.abs(deltaY) / 40);
-        this.scroller.applyFriction(frictionPower);
-      } else if (deltaY > 30) {
-        const boostPower = Math.min(1.5, deltaY / 60);
+      // TWO FINGERS MOVING UP -> SLOW DOWN / BRAKE
+      if (deltaY < -4) {
+        e.preventDefault(); // Stop native page jerk
+
+        if (deltaY < -130) {
+          // Strong deliberate flick upwards -> user is looking back at panels -> stop
+          this.scroller.stop();
+        } else {
+          // Responsive friction brake: drops speed smoothly
+          const brakeIntensity = Math.min(0.65, Math.abs(deltaY) / 25);
+          this.scroller.applyTwoFingerBrake(brakeIntensity);
+        }
+      } 
+      // TWO FINGERS MOVING DOWN -> SPEED UP PAST FILLER
+      else if (deltaY > 25) {
+        const boostPower = Math.min(1.2, deltaY / 55);
         this.scroller.applyBoost(boostPower);
       }
     }, { passive: false });
