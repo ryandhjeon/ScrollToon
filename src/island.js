@@ -12,6 +12,7 @@ class WebtoonDynamicIsland {
     this.fadeIdleTimeout = null;
     this.aboveBadgeTimeout = null;
     this.isDragging = false;
+    this.wasBraking = false;
 
     this.host = null;
     this.shadow = null;
@@ -110,6 +111,11 @@ class WebtoonDynamicIsland {
       .above-speed-badge.visible {
         opacity: 1 !important;
         transform: translateY(0);
+      }
+
+      .above-speed-badge.brake {
+        letter-spacing: 0.8px;
+        font-size: 12px;
       }
 
       /* Frosted Glass Shell */
@@ -379,20 +385,48 @@ class WebtoonDynamicIsland {
 
   // Shows the updated speed in the crisp 100% solid white layer directly above the tool
   triggerSpeedFeedback() {
-    if (!this.aboveBadgeEl) return;
-
-    this.aboveBadgeEl.textContent = this.scroller.cruiseSpeed.toFixed(1) + 'x';
-    this.aboveBadgeEl.classList.add('visible');
+    if (!this.aboveBadgeEl || this.scroller.isBraking) return;
 
     if (this.aboveBadgeTimeout) {
       clearTimeout(this.aboveBadgeTimeout);
     }
 
+    this.aboveBadgeEl.classList.remove('brake');
+    this.aboveBadgeEl.textContent = this.scroller.cruiseSpeed.toFixed(1) + 'x';
+    this.aboveBadgeEl.classList.add('visible');
+
     // Keep visible for 850ms, then smoothly fade out
     this.aboveBadgeTimeout = setTimeout(() => {
-      this.aboveBadgeEl.classList.remove('visible');
+      if (!this.scroller.isBraking) {
+        this.aboveBadgeEl.classList.remove('visible');
+      }
       this.aboveBadgeTimeout = null;
     }, 850);
+  }
+
+  // Shows crisp 100% solid white BRAKE bubble directly above the tool while holding brake
+  showBrakeBadge(active) {
+    if (!this.aboveBadgeEl) return;
+
+    if (this.aboveBadgeTimeout) {
+      clearTimeout(this.aboveBadgeTimeout);
+      this.aboveBadgeTimeout = null;
+    }
+
+    if (active) {
+      this.aboveBadgeEl.textContent = 'BRAKE';
+      this.aboveBadgeEl.classList.add('visible', 'brake');
+    } else {
+      // Releasing brake: show resume cruise speed briefly, then smoothly fade out
+      this.aboveBadgeEl.classList.remove('brake');
+      this.aboveBadgeEl.textContent = this.scroller.cruiseSpeed.toFixed(1) + 'x';
+      this.aboveBadgeTimeout = setTimeout(() => {
+        if (!this.scroller.isBraking) {
+          this.aboveBadgeEl.classList.remove('visible');
+        }
+        this.aboveBadgeTimeout = null;
+      }, 650);
+    }
   }
 
   setupDraggable(handle) {
@@ -573,15 +607,20 @@ class WebtoonDynamicIsland {
     }
 
     if (state.isBraking) {
+      this.showBrakeBadge(true);
       speedDisplay.textContent = 'BRAKE';
       speedDisplay.className = 'speed-display brake';
       if (speedCluster) speedCluster.className = 'speed-cluster brake-mode';
     } else {
+      if (this.wasBraking) {
+        this.showBrakeBadge(false);
+      }
       const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
       speedDisplay.textContent = formattedSpeed;
       speedDisplay.className = 'speed-display';
       if (speedCluster) speedCluster.className = 'speed-cluster';
     }
+    this.wasBraking = !!state.isBraking;
 
     this.updateProgress(state.progress);
   }

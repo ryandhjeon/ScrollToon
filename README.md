@@ -48,7 +48,7 @@
 | **Trackpad Scrolling** | Native | **Native 2-finger scroll** | <kbd>↑</kbd> / <kbd>↓</kbd> |
 | **Emergency Pause** | - | - | <kbd>Esc</kbd> |
 | **Speed Dial (±0.1x)** | **Hover speed & scroll wheel** | **Hover speed & scroll** | <kbd>[</kbd> / <kbd>]</kbd> |
-| **Speed Feedback** | In-island counter | In-island counter | Floating white badge above tool |
+| **Speed & Brake Feedback** | Floating white bubble above tool | Floating white bubble above tool | Floating white bubble above tool |
 | **Reposition Tool** | Drag gripper icon | Drag gripper icon | - |
 | **Reset Position** | **Reset button in Settings** or **Double-click gripper** | Double-click gripper | - |
 
