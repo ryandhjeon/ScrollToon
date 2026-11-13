@@ -127,14 +127,15 @@ class WebtoonDynamicIsland {
       /* Normal cruising speed text in ghost mode */
       .island-card.ghost .speed-display {
         opacity: 0.2;
+        font-weight: 500;
       }
 
-      /* Active feedback: Crisp 100% Solid White Speed in Center! */
+      /* Active feedback: Crisp 100% Solid White Speed in Center (No bold) */
       .island-card.ghost .speed-display.active-feedback {
         opacity: 1 !important;
         color: #FFFFFF !important;
-        font-weight: 800;
-        transform: scale(1.06);
+        font-weight: 500 !important;
+        transform: none;
       }
 
       /* Active Brake: Crisp 100% Solid Red BRAKE in Center! */
@@ -142,7 +143,6 @@ class WebtoonDynamicIsland {
         opacity: 1 !important;
         color: #FF4757 !important;
         font-weight: 800;
-        transform: scale(1.04);
       }
 
       .island-card:hover {
@@ -235,12 +235,17 @@ class WebtoonDynamicIsland {
       /* Speed Display in the Middle */
       .speed-display {
         font-size: 13px;
-        font-weight: 700;
+        font-weight: 500;
         letter-spacing: -0.3px;
         color: #00F5A0;
         min-width: 44px;
         text-align: center;
         cursor: ns-resize;
+      }
+
+      .speed-display.active-feedback {
+        color: #FFFFFF !important;
+        font-weight: 500 !important;
       }
 
       .speed-display.brake {
@@ -584,18 +589,8 @@ class WebtoonDynamicIsland {
     } else {
       const formattedSpeed = state.cruiseSpeed.toFixed(1) + 'x';
       speedDisplay.textContent = formattedSpeed;
-      if (this.wasBraking) {
-        // When releasing brake, show resuming cruise speed in crisp solid white
-        speedDisplay.className = 'speed-display active-feedback';
-        if (this.feedbackTimeout) clearTimeout(this.feedbackTimeout);
-        this.feedbackTimeout = setTimeout(() => {
-          speedDisplay.className = 'speed-display';
-          this.feedbackTimeout = null;
-        }, 700);
-      } else {
-        if (!speedDisplay.classList.contains('active-feedback')) {
-          speedDisplay.className = 'speed-display';
-        }
+      if (!speedDisplay.classList.contains('active-feedback')) {
+        speedDisplay.className = 'speed-display';
       }
       if (speedCluster) speedCluster.className = 'speed-cluster';
     }
