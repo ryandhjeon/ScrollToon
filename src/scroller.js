@@ -1,9 +1,7 @@
 /**
  * ScrollToon - 120Hz Sub-pixel Physics Scroll Engine
- * Uses organic exponential spring damping for super natural transitions.
- * Left-Click Hold = Hard Brake (Decelerates smoothly to 0)
- * Two-Finger Hold = Slow Glide (Glides down smoothly to ~35% speed)
- * Releasing = Immediately and naturally accelerates back to cruising speed in ~400ms.
+ * Butter-smooth Apple-grade exponential spring physics.
+ * Releasing returns to normal cruising speed with zero jarring transitions.
  */
 class WebtoonScroller {
   constructor(options = {}) {
@@ -14,8 +12,8 @@ class WebtoonScroller {
     this.isRunning = false;
 
     // States
-    this.isBraking = false;     // Left click hold
-    this.isSlowedDown = false; // Two finger hold
+    this.isBraking = false;     // Left-Click hold = Complete freeze
+    this.isSlowedDown = false; // Two-finger hold = Gentle slow-glide (~35% speed)
 
     // Sub-pixel accumulator
     this.subPixelRemainder = 0;
@@ -136,8 +134,9 @@ class WebtoonScroller {
     this.setCruiseSpeed(this.cruiseSpeed + delta);
   }
 
-  // 1. Hard Brake (Left-Click Hold): drops target to 0
+  // 1. Hard Brake (Left-Click Hold): drops target speed to 0
   setHardBrake(active) {
+    if (this.isBraking === active) return;
     this.isBraking = active;
     if (!this.isRunning) return;
 
@@ -145,8 +144,9 @@ class WebtoonScroller {
     this.notifyState();
   }
 
-  // 2. Slow Down (Two-Finger Hold): drops target to ~35% cruise speed
+  // 2. Slow Down (Two-Finger Hold): drops target speed to ~35%
   setSlowDown(active) {
+    if (this.isSlowedDown === active) return;
     this.isSlowedDown = active;
     if (!this.isRunning) return;
 
@@ -158,6 +158,7 @@ class WebtoonScroller {
     if (this.isBraking) {
       this.targetSpeed = 0;
     } else if (this.isSlowedDown) {
+      // Gentle reading crawl: ~35% of cruising speed (minimum 0.35x)
       this.targetSpeed = Math.max(0.35, Math.round(this.cruiseSpeed * 0.35 * 10) / 10);
     } else {
       this.targetSpeed = this.cruiseSpeed;
@@ -182,16 +183,16 @@ class WebtoonScroller {
     this.lastTimestamp = now;
     const dtSeconds = dt / 1000;
 
-    // Responsive, natural exponential physics:
-    // Decelerating: lambda = 5.5 (cushioned, smooth stop in ~300ms)
-    // Accelerating back to cruise: lambda = 5.0 (naturally reaches normal cruise speed in ~400ms)
+    // Organic Apple-grade exponential spring physics:
+    // Decelerating into slow/brake: lambda = 4.8 (smooth cushioned deceleration in ~350ms)
+    // Accelerating back to cruise: lambda = 3.8 (soft, natural momentum buildup in ~400ms)
     const isDecelerating = this.targetSpeed < this.currentSpeed;
-    const lambda = isDecelerating ? 5.5 : 5.0;
+    const lambda = isDecelerating ? 4.8 : 3.8;
     const decay = Math.exp(-lambda * dtSeconds);
 
     this.currentSpeed = this.targetSpeed + (this.currentSpeed - this.targetSpeed) * decay;
 
-    // Clean clamp near target
+    // Smooth clamp near target
     if (Math.abs(this.currentSpeed - this.targetSpeed) < 0.015) {
       this.currentSpeed = this.targetSpeed;
     }

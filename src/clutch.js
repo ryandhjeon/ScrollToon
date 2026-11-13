@@ -1,9 +1,9 @@
 /**
  * ScrollToon - Dual Input Controller
- * Left-Click Hold = Hard Brake (Stops completely)
- * Two-Finger Hold (Two-finger press on trackpad) = Slow Down (Glides at ~35% speed)
- * Releasing fingers = Instantly and naturally springs back to normal cruise speed
- * Scrolling up is NEVER intercepted or used as a trigger.
+ * Left-Click Hold = Hard Brake (Freezes screen)
+ * Two-Finger Hold on Trackpad = Slow Down (Cushioned glide down at ~35% speed)
+ * Releasing = Immediately and naturally glides back to normal cruising speed
+ * Fast scroll-up is NEVER hijacked.
  */
 class WebtoonClutch {
   constructor(scroller, options = {}) {
@@ -19,8 +19,8 @@ class WebtoonClutch {
 
     this.isLeftBrakeActive = false;
     this.isTwoFingerSlowActive = false;
+    this.twoFingerTouchTimer = null;
     this.leftDownTimestamp = 0;
-    this.twoFingerDownTimestamp = 0;
     this.preventNextClick = false;
     this.preventNextContextMenu = false;
     this.lastTapTime = 0;
@@ -30,33 +30,31 @@ class WebtoonClutch {
 
   init() {
     this.bindMouseAndPointerEvents();
+    this.bindTrackpadTouchEvents();
     this.bindKeyboardEvents();
   }
 
   bindMouseAndPointerEvents() {
-    // 1. PRESS EVENTS (mousedown & pointerdown)
+    // ONE-FINGER PRESS (Left Click) -> HARD BRAKE
     const onDown = (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
 
-      // ONE-FINGER PRESS (Left Click) -> HARD BRAKE
       if (e.button === 0 && this.options.enableLeftClickBrake && this.scroller.isRunning) {
         this.leftDownTimestamp = performance.now();
         this.isLeftBrakeActive = true;
         this.scroller.setHardBrake(true);
       }
 
-      // TWO-FINGER PRESS (Two-finger click on trackpad / Right-Click) -> SLOW DOWN
+      // TWO-FINGER PRESS/CLICK -> SLOW DOWN
       else if (e.button === 2 && this.options.enableTwoFingerSlow && this.scroller.isRunning) {
-        this.twoFingerDownTimestamp = performance.now();
         this.isTwoFingerSlowActive = true;
         this.preventNextContextMenu = true;
         this.scroller.setSlowDown(true);
       }
     };
 
-    // 2. RELEASE EVENTS (mouseup & pointerup & pointercancel & blur)
+    // RELEASE EVENTS -> NATURAL RECOVERY
     const onUp = (e) => {
-      // Release Left-Click Hard Brake if button 0 is released or no buttons remain
       if (this.isLeftBrakeActive) {
         const leftStillDown = (e.buttons !== undefined) && ((e.buttons & 1) === 1);
         if (!leftStillDown || e.button === 0 || e.type === 'blur' || e.type === 'pointercancel') {
@@ -69,16 +67,12 @@ class WebtoonClutch {
         }
       }
 
-      // Release Two-Finger Slow Down if button 2 is released or no buttons remain
       if (this.isTwoFingerSlowActive) {
         const rightStillDown = (e.buttons !== undefined) && ((e.buttons & 2) === 2);
         if (!rightStillDown || e.button === 2 || e.type === 'blur' || e.type === 'pointercancel') {
           this.isTwoFingerSlowActive = false;
           this.scroller.setSlowDown(false);
-
-          if (performance.now() - this.twoFingerDownTimestamp > 120) {
-            this.preventNextContextMenu = true;
-          }
+          this.preventNextContextMenu = true;
         }
       }
     };
@@ -91,7 +85,7 @@ class WebtoonClutch {
     window.addEventListener('pointercancel', onUp, { capture: true });
     window.addEventListener('blur', onUp, { capture: true });
 
-    // Suppress context menu when using two-finger hold
+    // Suppress context menu on two-finger click/hold
     window.addEventListener('contextmenu', (e) => {
       if (this.isTwoFingerSlowActive || this.preventNextContextMenu) {
         e.preventDefault();
@@ -100,7 +94,6 @@ class WebtoonClutch {
       }
     }, { capture: true });
 
-    // Suppress accidental link opening when releasing left-click brake
     window.addEventListener('click', (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
 
@@ -117,7 +110,7 @@ class WebtoonClutch {
       }
     }, { capture: true });
 
-    // 3. MIDDLE CLICK = TOGGLE PLAY / PAUSE
+    // Middle-click toggle
     window.addEventListener('auxclick', (e) => {
       if (!this.options.enableMiddleClickToggle) return;
       if (e.button === 1) {
@@ -133,7 +126,7 @@ class WebtoonClutch {
       }
     }, { capture: true });
 
-    // 4. DOUBLE-CLICK IN GUTTER = TOGGLE PLAY / PAUSE
+    // Double-click toggle
     window.addEventListener('click', (e) => {
       if (!this.options.enableDoubleTapToggle) return;
       if (e.target && e.target.closest && e.target.closest('a, button, input, [role="button"], #scrolltoon-host')) return;
@@ -146,6 +139,49 @@ class WebtoonClutch {
         this.lastTapTime = now;
       }
     });
+  }
+
+  // TWO-FINGER TRACKPAD TOUCH & HOLD DETECTION
+  bindTrackpadTouchEvents() {
+    const handleTrackpadWheel = (e) => {
+      if (!this.options.enableTwoFingerSlow) return;
+      if (!this.scroller.isRunning) return;
+
+      // Allow wheel over our island
+      if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
+
+      const deltaY = e.deltaY;
+
+      // If user is intentionally scrolling UP fast to inspect earlier panels, DO NOT hijack!
+      if (deltaY < -45) {
+        return;
+      }
+
+      // When two fingers are placed and held on the trackpad surface:
+      // Trackpad sends gentle low-delta events (micro-movements/friction)
+      if (Math.abs(deltaY) >= 0.2 && Math.abs(deltaY) < 35) {
+        e.preventDefault();
+
+        // Engage slow-glide
+        this.scroller.setSlowDown(true);
+
+        if (this.twoFingerTouchTimer) {
+          clearTimeout(this.twoFingerTouchTimer);
+        }
+
+        // As soon as fingers lift off the glass surface (250ms of silence),
+        // smoothly and naturally accelerate back to normal cruising speed!
+        this.twoFingerTouchTimer = setTimeout(() => {
+          if (!this.isTwoFingerSlowActive) {
+            this.scroller.setSlowDown(false);
+          }
+          this.twoFingerTouchTimer = null;
+        }, 250);
+      }
+    };
+
+    window.addEventListener('wheel', handleTrackpadWheel, { capture: true, passive: false });
+    document.addEventListener('wheel', handleTrackpadWheel, { capture: true, passive: false });
   }
 
   bindKeyboardEvents() {
