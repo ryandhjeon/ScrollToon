@@ -6,15 +6,23 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="popup-container">
+  <div class="popup-container" id="popupContainer">
+    <!-- Header with Master On/Off Switch -->
     <div class="header">
       <div class="logo">
-        <span class="mint-dot"></span>
+        <span class="mint-dot" id="headerDot"></span>
         <h1>ScrollToon</h1>
       </div>
-      <span class="version">v1.0</span>
+      <div class="header-right">
+        <span class="status-pill" id="statusPill">ON</span>
+        <label class="switch switch-header" title="Master Turn On / Off">
+          <input type="checkbox" id="masterEnabled" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
 
+    <!-- Speed Adjustment -->
     <div class="section">
       <label class="label">Default Cruise Speed</label>
       <div class="speed-picker">
@@ -23,6 +31,19 @@
       </div>
     </div>
 
+    <!-- Behavior & Detection -->
+    <div class="section">
+      <label class="label">Detection & Activation</label>
+      <div class="toggle-row">
+        <span>Only on Webtoon Readers</span>
+        <label class="switch">
+          <input type="checkbox" id="autoDetectOnly" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Controls & Gestures -->
     <div class="section">
       <label class="label">Controls & Gestures</label>
       
@@ -51,8 +72,15 @@
       </div>
     </div>
 
+    <!-- Tool Placement & Quick Actions -->
     <div class="section">
-      <label class="label">Tool Position</label>
+      <label class="label">Tool Placement & Visibility</label>
+      <div class="position-row">
+        <span>Active on Current Tab</span>
+        <button id="toggleCurrentTabBtn" class="action-btn" title="Force show or hide the tool on this page">
+          <span id="tabStateIndicator">Toggle Tab</span>
+        </button>
+      </div>
       <div class="position-row">
         <span>Screen Placement</span>
         <button id="resetPositionBtn" class="action-btn" title="Snap tool back to bottom-center default position">
@@ -65,6 +93,7 @@
       </div>
     </div>
 
+    <!-- Quick Hotkeys -->
     <div class="section shortcuts-section">
       <label class="label">Quick Hotkeys</label>
       <div class="shortcut-list">

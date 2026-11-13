@@ -22,6 +22,15 @@ class WebtoonClutch {
     this.preventNextClick = false;
     this.lastTapTime = 0;
 
+    this.onDown = null;
+    this.onUp = null;
+    this.onBrakeClick = null;
+    this.onDragStart = null;
+    this.onAuxClick = null;
+    this.onAuxMouseDown = null;
+    this.onDoubleTapClick = null;
+    this.onKeyDown = null;
+
     this.init();
   }
 
@@ -32,7 +41,7 @@ class WebtoonClutch {
 
   bindMouseAndPointerEvents() {
     // ONE-FINGER PRESS (Left Click) -> HARD BRAKE
-    const onDown = (e) => {
+    this.onDown = (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
 
       if (e.button === 0 && this.options.enableLeftClickBrake && this.scroller.isRunning) {
@@ -43,7 +52,7 @@ class WebtoonClutch {
     };
 
     // RELEASE EVENTS -> NATURAL RECOVERY
-    const onUp = (e) => {
+    this.onUp = (e) => {
       if (this.isLeftBrakeActive) {
         const leftStillDown = (e.buttons !== undefined) && ((e.buttons & 1) === 1);
         if (!leftStillDown || e.button === 0 || e.type === 'blur' || e.type === 'pointercancel') {
@@ -57,16 +66,16 @@ class WebtoonClutch {
       }
     };
 
-    window.addEventListener('mousedown', onDown, { capture: true });
-    window.addEventListener('pointerdown', onDown, { capture: true });
+    window.addEventListener('mousedown', this.onDown, { capture: true });
+    window.addEventListener('pointerdown', this.onDown, { capture: true });
 
-    window.addEventListener('mouseup', onUp, { capture: true });
-    window.addEventListener('pointerup', onUp, { capture: true });
-    window.addEventListener('pointercancel', onUp, { capture: true });
-    window.addEventListener('blur', onUp, { capture: true });
+    window.addEventListener('mouseup', this.onUp, { capture: true });
+    window.addEventListener('pointerup', this.onUp, { capture: true });
+    window.addEventListener('pointercancel', this.onUp, { capture: true });
+    window.addEventListener('blur', this.onUp, { capture: true });
 
     // Suppress accidental link opening when releasing left-click brake
-    window.addEventListener('click', (e) => {
+    this.onBrakeClick = (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
 
       if (this.preventNextClick) {
@@ -74,32 +83,36 @@ class WebtoonClutch {
         e.stopPropagation();
         this.preventNextClick = false;
       }
-    }, { capture: true });
+    };
+    window.addEventListener('click', this.onBrakeClick, { capture: true });
 
-    window.addEventListener('dragstart', (e) => {
+    this.onDragStart = (e) => {
       if (this.isLeftBrakeActive) {
         e.preventDefault();
       }
-    }, { capture: true });
+    };
+    window.addEventListener('dragstart', this.onDragStart, { capture: true });
 
     // Middle-click toggle
-    window.addEventListener('auxclick', (e) => {
+    this.onAuxClick = (e) => {
       if (!this.options.enableMiddleClickToggle) return;
       if (e.button === 1) {
         e.preventDefault();
         e.stopPropagation();
         this.scroller.toggle();
       }
-    }, { capture: true });
+    };
+    window.addEventListener('auxclick', this.onAuxClick, { capture: true });
 
-    window.addEventListener('mousedown', (e) => {
+    this.onAuxMouseDown = (e) => {
       if (e.button === 1 && this.options.enableMiddleClickToggle) {
         e.preventDefault();
       }
-    }, { capture: true });
+    };
+    window.addEventListener('mousedown', this.onAuxMouseDown, { capture: true });
 
     // Double-click in margin toggle
-    window.addEventListener('click', (e) => {
+    this.onDoubleTapClick = (e) => {
       if (!this.options.enableDoubleTapToggle) return;
       if (e.target && e.target.closest && e.target.closest('a, button, input, [role="button"], #scrolltoon-host')) return;
 
@@ -110,11 +123,12 @@ class WebtoonClutch {
       } else {
         this.lastTapTime = now;
       }
-    });
+    };
+    window.addEventListener('click', this.onDoubleTapClick);
   }
 
   bindKeyboardEvents() {
-    window.addEventListener('keydown', (e) => {
+    this.onKeyDown = (e) => {
       const tag = document.activeElement ? document.activeElement.tagName : '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || (document.activeElement && document.activeElement.isContentEditable)) {
         return;
@@ -156,7 +170,39 @@ class WebtoonClutch {
           }
           break;
       }
-    });
+    };
+    window.addEventListener('keydown', this.onKeyDown);
+  }
+
+  destroy() {
+    if (this.onDown) {
+      window.removeEventListener('mousedown', this.onDown, { capture: true });
+      window.removeEventListener('pointerdown', this.onDown, { capture: true });
+    }
+    if (this.onUp) {
+      window.removeEventListener('mouseup', this.onUp, { capture: true });
+      window.removeEventListener('pointerup', this.onUp, { capture: true });
+      window.removeEventListener('pointercancel', this.onUp, { capture: true });
+      window.removeEventListener('blur', this.onUp, { capture: true });
+    }
+    if (this.onBrakeClick) {
+      window.removeEventListener('click', this.onBrakeClick, { capture: true });
+    }
+    if (this.onDragStart) {
+      window.removeEventListener('dragstart', this.onDragStart, { capture: true });
+    }
+    if (this.onAuxClick) {
+      window.removeEventListener('auxclick', this.onAuxClick, { capture: true });
+    }
+    if (this.onAuxMouseDown) {
+      window.removeEventListener('mousedown', this.onAuxMouseDown, { capture: true });
+    }
+    if (this.onDoubleTapClick) {
+      window.removeEventListener('click', this.onDoubleTapClick);
+    }
+    if (this.onKeyDown) {
+      window.removeEventListener('keydown', this.onKeyDown);
+    }
   }
 }
 

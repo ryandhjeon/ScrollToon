@@ -15,14 +15,16 @@ class WebtoonPreloader {
     this.scanAndPreload();
 
     // Watch for dynamically inserted images (infinite scroll / next chapter Ajax)
-    const domObserver = new MutationObserver(() => {
+    this.domObserver = new MutationObserver(() => {
       this.scanAndPreload();
     });
 
-    domObserver.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+    if (document.body) {
+      this.domObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    }
   }
 
   setupIntersectionObserver() {
@@ -86,6 +88,17 @@ class WebtoonPreloader {
       img.decode().catch(() => {
         // Ignore decode errors on non-standard images
       });
+    }
+  }
+
+  destroy() {
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = null;
+    }
+    if (this.domObserver) {
+      this.domObserver.disconnect();
+      this.domObserver = null;
     }
   }
 }

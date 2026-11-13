@@ -594,6 +594,18 @@ class WebtoonDynamicIsland {
     if (progressFill) progressFill.style.width = `${rounded}%`;
     if (progressText) progressText.textContent = `${rounded}%`;
   }
+
+  destroy() {
+    this.clearFadeTimer();
+    if (this.aboveBadgeTimeout) {
+      clearTimeout(this.aboveBadgeTimeout);
+      this.aboveBadgeTimeout = null;
+    }
+    if (this.host) {
+      this.host.remove();
+      this.host = null;
+    }
+  }
 }
 
 window.ScrollToonIsland = WebtoonDynamicIsland;
