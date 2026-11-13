@@ -58,16 +58,49 @@
 
 ```
 webtoon-scroller/
-├── manifest.json        # Chrome MV3 config with broad comic site permissions
+├── manifest.json        # Chrome MV3 config (v1.2.0)
+├── CHANGELOG.md         # Full release history & per-version status
 ├── icons/               # High-DPI icons
 ├── src/
 │   ├── preloader.js     # 3500px proactive lazy-load booster
 │   ├── scroller.js      # Float accumulator rAF physics engine
 │   ├── clutch.js        # Mouse & trackpad gesture clutch engine
 │   ├── island.js        # Shadow DOM liquid glass morphing island
-│   └── content.js       # Main orchestrator
+│   └── content.js       # Main orchestrator & live settings sync
 └── popup/
-    ├── popup.html       # Extension settings popup
+    ├── popup.html       # Extension settings popup with Step Size slider
     ├── popup.css        # Dark theme styling
-    └── popup.js         # Chrome storage sync
+    └── popup.js         # Chrome storage sync & live tab broadcast
+```
+
+---
+
+## 📦 Version History & Update Status
+
+See [CHANGELOG.md](file:///Users/ryan/git/webtoon-scroller/CHANGELOG.md) for full release notes and details.
+
+| Version | Status | Date | Highlights |
+| :--- | :--- | :--- | :--- |
+| **v1.2.0** | 🟢 **Active / Current** | 2026-11-13 | Customizable step size (`±0.1x` to `±1.0x`), calm SVG morph, zero blur |
+| **v1.1.0** | 🟡 **Shipped** | 2026-11-13 | Center feedback, borderless glass, manual toggle (<kbd>⌥S</kbd>), reset button |
+| **v1.0.0** | ⚪ **Initial Base** | 2026-11-13 | 120Hz sub-pixel engine, predictive preloader, clutch brake |
+
+---
+
+## 🐙 Version Control with Git & GitHub
+
+This project uses Git for local semantic versioning and can be pushed to GitHub:
+
+### Link to Remote GitHub Repository
+```bash
+# 1. Add your GitHub remote repository
+git remote add origin https://github.com/ryandhjeon/webtoon-scroller.git
+
+# 2. Push main branch
+git branch -M main
+git push -u origin main
+
+# 3. Tag releases
+git tag -a v1.2.0 -m "Release v1.2.0"
+git push origin --tags
 ```
