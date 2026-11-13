@@ -86,16 +86,15 @@ class WebtoonDynamicIsland {
         align-items: center;
       }
 
-      /* LAYER ABOVE: Crisp 100% Opaque Pure White Badge */
+      /* LAYER ABOVE: Crisp Opaque Badge (Borderless) */
       .above-speed-badge {
-        background: rgba(14, 18, 24, 0.94);
+        background: rgba(14, 18, 24, 0.95);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65),
-                    0 0 1px rgba(255, 255, 255, 0.4);
+        border: none;
+        box-shadow: 0 8px 26px rgba(0, 0, 0, 0.7);
         border-radius: 9999px;
-        padding: 4px 14px;
+        padding: 5px 15px;
         font-size: 13px;
         font-weight: 800;
         letter-spacing: -0.3px;
@@ -114,19 +113,22 @@ class WebtoonDynamicIsland {
       }
 
       .above-speed-badge.brake {
+        color: #FF4757 !important;
         letter-spacing: 0.8px;
         font-size: 12px;
+        font-weight: 800;
+        box-shadow: 0 8px 26px rgba(0, 0, 0, 0.75), 0 0 16px rgba(255, 71, 87, 0.4);
       }
 
-      /* Frosted Glass Shell */
+      /* Frosted Glass Shell (Borderless) */
       .island-card {
-        background: rgba(16, 20, 26, 0.78);
+        background: rgba(16, 20, 26, 0.82);
         backdrop-filter: blur(24px) saturate(190%);
         -webkit-backdrop-filter: blur(24px) saturate(190%);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), 
-                    0 2px 8px rgba(0, 0, 0, 0.25),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        border: none;
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), 
+                    0 2px 10px rgba(0, 0, 0, 0.35),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.18);
         border-radius: 9999px;
         color: #FFFFFF;
         display: flex;
@@ -136,7 +138,6 @@ class WebtoonDynamicIsland {
         height: 48px;
         cursor: default;
         transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                    border-color 0.2s ease,
                     box-shadow 0.2s ease;
       }
 
@@ -147,10 +148,9 @@ class WebtoonDynamicIsland {
 
       .island-card:hover {
         opacity: 1 !important;
-        border-color: rgba(255, 255, 255, 0.35);
-        box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6), 
-                    0 4px 12px rgba(0, 0, 0, 0.35),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65), 
+                    0 4px 14px rgba(0, 0, 0, 0.4),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.25);
       }
 
       /* Drag handle */
@@ -203,13 +203,13 @@ class WebtoonDynamicIsland {
         background: rgba(255, 255, 255, 0.08);
         padding: 3px 8px;
         border-radius: 9999px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: none;
       }
 
       .speed-cluster.brake-mode {
-        border-color: rgba(255, 71, 87, 0.7);
-        background: rgba(255, 71, 87, 0.15);
-        box-shadow: 0 0 16px rgba(255, 71, 87, 0.5);
+        border: none;
+        background: rgba(255, 71, 87, 0.2);
+        box-shadow: 0 0 16px rgba(255, 71, 87, 0.45);
       }
 
       /* Stepper Buttons (- and +) */
