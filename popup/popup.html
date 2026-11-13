@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ScrollToon Settings</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <div class="header">
+      <div class="logo">
+        <span class="mint-dot"></span>
+        <h1>ScrollToon</h1>
+      </div>
+      <span class="version">v1.0</span>
+    </div>
+
+    <div class="section">
+      <label class="label">Default Cruise Speed</label>
+      <div class="speed-picker">
+        <input type="range" id="defaultSpeedInput" min="0.5" max="4.0" step="0.1" value="1.5">
+        <span class="speed-val" id="speedVal">1.5x</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <label class="label">Controls & Gestures</label>
+      
+      <div class="toggle-row">
+        <span>Middle-Click Toggle</span>
+        <label class="switch">
+          <input type="checkbox" id="middleClickToggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <span>Right-Click Clutch Hold</span>
+        <label class="switch">
+          <input type="checkbox" id="rightClickClutch" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <span>Wheel / Trackpad Friction</span>
+        <label class="switch">
+          <input type="checkbox" id="wheelBraking" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <span>Gutter Double-Click Toggle</span>
+        <label class="switch">
+          <input type="checkbox" id="doubleTapToggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="section shortcuts-section">
+      <label class="label">Quick Hotkeys</label>
+      <div class="shortcut-list">
+        <div class="shortcut-item"><span>Play / Pause</span><kbd>Space</kbd></div>
+        <div class="shortcut-item"><span>Clutch Brake</span><kbd>Hold Right-Click</kbd></div>
+        <div class="shortcut-item"><span>Speed ±0.1x</span><kbd>[</kbd> <kbd>]</kbd></div>
+        <div class="shortcut-item"><span>Emergency Freeze</span><kbd>Esc</kbd></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

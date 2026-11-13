@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "ScrollToon - Dynamic Webtoon Autoscroller",
+  "version": "1.0.0",
+  "description": "Butter-smooth 120Hz autoscroller with Dynamic Island UI, clutch braking, and lazy-load acceleration for webtoons and manga.",
+  "permissions": [
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.webtoons.com/*",
+        "https://comic.naver.com/*",
+        "https://tapas.io/*",
+        "https://www.lezhinus.com/*",
+        "https://mangadex.org/*",
+        "https://asuracomic.net/*",
+        "https://asurascans.com/*",
+        "https://reaperscans.com/*",
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/preloader.js",
+        "src/scroller.js",
+        "src/clutch.js",
+        "src/island.js",
+        "src/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
