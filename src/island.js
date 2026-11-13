@@ -103,9 +103,17 @@ class WebtoonDynamicIsland {
                     box-shadow 0.2s ease;
       }
 
-      /* Ghost mode: Pure low opacity with ZERO background blur */
+      /* Ghost mode: Pure ultra-low opacity with ZERO background blur */
       .island-card.ghost {
-        background: rgba(0, 0, 0, 0.12);
+        background: rgba(0, 0, 0, 0.04);
+        box-shadow: none;
+      }
+
+      .island-card.ghost .speed-cluster {
+        background: transparent;
+      }
+
+      .island-card.ghost .play-btn {
         box-shadow: none;
       }
 
@@ -114,14 +122,15 @@ class WebtoonDynamicIsland {
       .island-card.ghost .speed-step-btn,
       .island-card.ghost .reading-progress-bar,
       .island-card.ghost .progress-text {
-        opacity: 0.12;
+        opacity: 0.05;
         transition: opacity 0.3s ease;
       }
 
       /* Normal cruising speed text in ghost mode */
       .island-card.ghost .speed-display {
-        opacity: 0.2;
+        opacity: 0.08;
         font-weight: 500;
+        transition: opacity 0.3s ease;
       }
 
       /* Active feedback: Crisp 100% Solid White Speed in Center (No bold) */
@@ -140,10 +149,22 @@ class WebtoonDynamicIsland {
       }
 
       .island-card:hover {
-        opacity: 1 !important;
+        background: rgba(16, 20, 26, 0.92) !important;
         box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65), 
-                    0 4px 14px rgba(0, 0, 0, 0.4),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+                    0 4px 14px rgba(0, 0, 0, 0.4);
+      }
+
+      .island-card:hover .speed-cluster {
+        background: rgba(255, 255, 255, 0.08) !important;
+      }
+
+      .island-card:hover .drag-handle,
+      .island-card:hover .play-btn,
+      .island-card:hover .speed-step-btn,
+      .island-card:hover .reading-progress-bar,
+      .island-card:hover .progress-text,
+      .island-card:hover .speed-display {
+        opacity: 1 !important;
       }
 
       /* Drag handle */
@@ -370,9 +391,7 @@ class WebtoonDynamicIsland {
     });
 
     this.cardEl.addEventListener('mouseleave', () => {
-      if (this.scroller.isRunning) {
-        this.scheduleFade();
-      }
+      this.scheduleFade();
     });
   }
 
@@ -513,7 +532,7 @@ class WebtoonDynamicIsland {
 
       if (dist < this.proximityThresholdPx) {
         this.wakeOpacity();
-      } else if (this.scroller.isRunning && !this.isGhosted) {
+      } else if (!this.isGhosted) {
         this.scheduleFade();
       }
     }, { passive: true });
@@ -522,15 +541,13 @@ class WebtoonDynamicIsland {
   wakeOpacity() {
     this.clearFadeTimer();
     this.setGhost(false);
-    if (this.scroller.isRunning) {
-      this.scheduleFade();
-    }
+    this.scheduleFade();
   }
 
   scheduleFade() {
     this.clearFadeTimer();
     this.fadeIdleTimeout = setTimeout(() => {
-      if (this.scroller.isRunning && !this.isDragging) {
+      if (!this.isDragging && (!this.cardEl || !this.cardEl.matches(':hover'))) {
         this.setGhost(true);
       }
     }, 1800);
@@ -568,12 +585,13 @@ class WebtoonDynamicIsland {
     if (state.isRunning) {
       playIcon.style.display = 'none';
       pauseIcon.style.display = 'block';
-      this.scheduleFade();
     } else {
       playIcon.style.display = 'block';
       pauseIcon.style.display = 'none';
-      this.clearFadeTimer();
-      this.setGhost(false);
+    }
+
+    if (!this.cardEl.matches(':hover') && !this.isDragging) {
+      this.scheduleFade();
     }
 
     if (state.isBraking) {
