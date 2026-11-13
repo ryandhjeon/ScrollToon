@@ -86,13 +86,13 @@ class WebtoonDynamicIsland {
         align-items: center;
       }
 
-      /* LAYER ABOVE: Crisp Opaque Badge (Borderless) */
+      /* LAYER ABOVE: Crisp Opaque Badge (No Shadows) */
       .above-speed-badge {
         background: rgba(14, 18, 24, 0.95);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         border: none;
-        box-shadow: 0 8px 26px rgba(0, 0, 0, 0.7);
+        box-shadow: none;
         border-radius: 9999px;
         padding: 5px 15px;
         font-size: 13px;
@@ -117,7 +117,7 @@ class WebtoonDynamicIsland {
         letter-spacing: 0.8px;
         font-size: 12px;
         font-weight: 800;
-        box-shadow: 0 8px 26px rgba(0, 0, 0, 0.75), 0 0 16px rgba(255, 71, 87, 0.4);
+        box-shadow: none;
       }
 
       /* Frosted Glass Shell (Borderless) */
@@ -209,7 +209,7 @@ class WebtoonDynamicIsland {
       .speed-cluster.brake-mode {
         border: none;
         background: rgba(255, 71, 87, 0.2);
-        box-shadow: 0 0 16px rgba(255, 71, 87, 0.45);
+        box-shadow: none;
       }
 
       /* Stepper Buttons (- and +) */
