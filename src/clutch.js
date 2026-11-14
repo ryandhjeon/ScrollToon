@@ -144,11 +144,11 @@ class WebtoonClutch {
         if (this.trackpadYieldTimer) {
           clearTimeout(this.trackpadYieldTimer);
         }
-        // Resumes smoothly after finger movement ceases (450ms hold)
+        // Snappy resumption: 200ms after finger movement ceases, autoscroll flows downward again
         this.trackpadYieldTimer = setTimeout(() => {
           this.scroller.setTrackpadYield(false);
           this.trackpadYieldTimer = null;
-        }, 450);
+        }, 200);
       }
     };
     window.addEventListener('wheel', this.onWheel, { capture: true, passive: true });

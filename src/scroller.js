@@ -222,9 +222,9 @@ class WebtoonScroller {
 
     // Organic exponential spring physics:
     // Deceleration (8.0): frictionless, rapid drop to pause when touching trackpad.
-    // Acceleration (4.2): gentle, luxurious ease-in resumption when fingers are off.
+    // Acceleration (5.2): prompt, organic ease-in resumption when fingers are off.
     const isDecelerating = this.targetSpeed < this.currentSpeed;
-    const lambda = isDecelerating ? 8.0 : 4.2;
+    const lambda = isDecelerating ? 8.0 : 5.2;
     const decay = Math.exp(-lambda * dtSeconds);
 
     this.currentSpeed = this.targetSpeed + (this.currentSpeed - this.targetSpeed) * decay;
