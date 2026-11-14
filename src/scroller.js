@@ -155,7 +155,7 @@ class WebtoonScroller {
   }
 
   setCruiseSpeed(speed) {
-    this.cruiseSpeed = Math.max(0.2, Math.min(6.0, Math.round(speed * 10) / 10));
+    this.cruiseSpeed = Math.max(0.2, Math.min(7.0, Math.round(speed * 10) / 10));
     if (this.isRunning && !this.isBraking) {
       this.targetSpeed = this.cruiseSpeed;
     }
