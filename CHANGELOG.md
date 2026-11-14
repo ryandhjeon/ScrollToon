@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🎨 Refined & Fixed
 - **Consistent Mint Identity**: Maintained pure `#00F5A0` mint tone on the play button during pause feedback, eliminating awkward grayish-green color blending.
-- **Correct Status Icon Orientation**: Play icon (▶) now displays when active/scrolling; Pause icon (❚❚) displays when stopped.
+- **Standard Media Player Icon Orientation**: Play icon (▶) displays when stopped to start; Pause icon (❚❚) displays while scrolling to pause.
 - **Ultra-Low Ghost Opacity**: Lowered reading mode opacity to `0.04` background, `0.05` controls, and `0.08` cruising speed for maximum transparency.
 - **Continuous Passive Progress**: Reading percentage continuously tracks manual trackpad scrolling in real time even when autoscroll is stopped.
 

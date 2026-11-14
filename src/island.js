@@ -347,8 +347,8 @@ class WebtoonDynamicIsland {
           </div>
 
           <button class="play-btn" id="playBtn" title="Toggle Auto-Scroll (Space or Middle-Click)">
-            <svg id="playIcon" class="hidden" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            <svg id="pauseIcon" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
 
           <!-- Speed & State Cluster: [ -  1.5x  + ] -->
@@ -630,13 +630,13 @@ class WebtoonDynamicIsland {
     if (!playIcon || !pauseIcon || !speedDisplay) return;
 
     if (state.isRunning) {
-      // Activating / Running -> Smoothly morph to START / Play icon (▶)
-      playIcon.classList.remove('hidden');
-      pauseIcon.classList.add('hidden');
-    } else {
-      // Stopped / Paused -> Smoothly morph to STOP / Pause icon (❚❚)
+      // Running -> Show Pause icon (❚❚) to allow pausing
       playIcon.classList.add('hidden');
       pauseIcon.classList.remove('hidden');
+    } else {
+      // Stopped -> Show Play icon (▶) to allow starting
+      playIcon.classList.remove('hidden');
+      pauseIcon.classList.add('hidden');
     }
 
     if (!this.cardEl.matches(':hover') && !this.isDragging) {
