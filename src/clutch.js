@@ -32,7 +32,8 @@ class WebtoonClutch {
     this.onDoubleTapClick = null;
     this.onKeyDown = null;
     this.onWheel = null;
-    this.upwardSlowdownTimer = null;
+    this.onScrollEnd = null;
+    this.trackpadYieldTimer = null;
 
     this.init();
   }
@@ -129,37 +130,40 @@ class WebtoonClutch {
     };
     window.addEventListener('click', this.onDoubleTapClick);
 
-    // TWO-FINGER SCROLL UP -> TEMPORARY SPEED SLOWDOWN
-    // Lets users effortlessly scroll up with two fingers to review past panels without engine resistance
+    // TWO-FINGER TRACKPAD TOUCH & HOLD -> CLOSE TO PAUSE
+    // When the user touches, scrolls, or holds with two fingers, autoscroll drops to 0 ("close to pause").
+    // When fingers are lifted, autoscroll seamlessly accelerates and scrolls down again.
     this.onWheel = (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
       if (!this.scroller.isRunning) return;
+      if (e.ctrlKey) return; // Ignore pinch-to-zoom gestures
 
-      // Ensure vertical scroll dominates horizontal gestures
-      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      // Check for any deliberate two-finger trackpad or wheel movement
+      if (Math.abs(e.deltaY) > 0.5 || Math.abs(e.deltaX) > 0.5) {
+        this.scroller.setTrackpadYield(true);
 
-      // Upward scroll detected (two-finger swipe up or mouse wheel up)
-      if (e.deltaY < -2) {
-        this.scroller.setUpwardSlowdown(true);
-
-        if (this.upwardSlowdownTimer) {
-          clearTimeout(this.upwardSlowdownTimer);
+        if (this.trackpadYieldTimer) {
+          clearTimeout(this.trackpadYieldTimer);
         }
-        // Brief slowdown duration (180ms) so autoscroll naturally resumes downward immediately
-        this.upwardSlowdownTimer = setTimeout(() => {
-          this.scroller.setUpwardSlowdown(false);
-          this.upwardSlowdownTimer = null;
-        }, 180);
-      } else if (e.deltaY > 1 && this.scroller.isUpwardSlowdown) {
-        // Immediate release when user resumes downward scroll
-        if (this.upwardSlowdownTimer) {
-          clearTimeout(this.upwardSlowdownTimer);
-          this.upwardSlowdownTimer = null;
-        }
-        this.scroller.setUpwardSlowdown(false);
+        // Seamless resumption: 280ms after finger movement ceases, autoscroll glides forward
+        this.trackpadYieldTimer = setTimeout(() => {
+          this.scroller.setTrackpadYield(false);
+          this.trackpadYieldTimer = null;
+        }, 280);
       }
     };
     window.addEventListener('wheel', this.onWheel, { capture: true, passive: true });
+
+    // Chrome 114+ native scrollend listener: instant seamless handover when momentum finishes
+    this.onScrollEnd = () => {
+      if (!this.scroller.isRunning || !this.scroller.isTrackpadYielding) return;
+      if (this.trackpadYieldTimer) {
+        clearTimeout(this.trackpadYieldTimer);
+        this.trackpadYieldTimer = null;
+      }
+      this.scroller.setTrackpadYield(false);
+    };
+    window.addEventListener('scrollend', this.onScrollEnd, { passive: true });
   }
 
   setSpeedStep(step) {
@@ -244,12 +248,15 @@ class WebtoonClutch {
     if (this.onKeyDown) {
       window.removeEventListener('keydown', this.onKeyDown);
     }
-    if (this.upwardSlowdownTimer) {
-      clearTimeout(this.upwardSlowdownTimer);
-      this.upwardSlowdownTimer = null;
+    if (this.trackpadYieldTimer) {
+      clearTimeout(this.trackpadYieldTimer);
+      this.trackpadYieldTimer = null;
     }
     if (this.onWheel) {
       window.removeEventListener('wheel', this.onWheel, { capture: true, passive: true });
+    }
+    if (this.onScrollEnd) {
+      window.removeEventListener('scrollend', this.onScrollEnd, { passive: true });
     }
   }
 }

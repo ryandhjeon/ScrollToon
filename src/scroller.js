@@ -13,7 +13,7 @@ class WebtoonScroller {
     this.targetSpeed = 0;
     this.isRunning = false;
     this.isBraking = false; // Left-Click hold
-    this.isUpwardSlowdown = false; // Two-finger scroll up slowdown
+    this.isTrackpadYielding = false; // Two-finger trackpad scroll & hold yield
 
     // Sub-pixel accumulator
     this.subPixelRemainder = 0;
@@ -127,7 +127,7 @@ class WebtoonScroller {
     if (this.isRunning) return;
     this.isRunning = true;
     this.isBraking = false;
-    this.isUpwardSlowdown = false;
+    this.isTrackpadYielding = false;
     this.targetSpeed = this.cruiseSpeed;
     this.lastTimestamp = performance.now();
     this.loop(this.lastTimestamp);
@@ -138,7 +138,7 @@ class WebtoonScroller {
     if (!this.isRunning) return;
     this.isRunning = false;
     this.isBraking = false;
-    this.isUpwardSlowdown = false;
+    this.isTrackpadYielding = false;
     this.targetSpeed = 0;
     this.currentSpeed = 0;
     this.subPixelRemainder = 0;
@@ -157,19 +157,10 @@ class WebtoonScroller {
     }
   }
 
-  getSlowdownSpeed() {
-    // Brief, natural speed dip (~50% of cruise speed, min 0.3x) so it scrolls down naturally
-    return Math.max(0.3, Math.round(this.cruiseSpeed * 0.5 * 10) / 10);
-  }
-
   setCruiseSpeed(speed) {
     this.cruiseSpeed = Math.max(0.2, Math.min(7.0, Math.round(speed * 10) / 10));
-    if (this.isRunning && !this.isBraking) {
-      if (this.isUpwardSlowdown) {
-        this.targetSpeed = this.getSlowdownSpeed();
-      } else {
-        this.targetSpeed = this.cruiseSpeed;
-      }
+    if (this.isRunning && !this.isBraking && !this.isTrackpadYielding) {
+      this.targetSpeed = this.cruiseSpeed;
     }
     this.notifyState();
   }
@@ -184,27 +175,24 @@ class WebtoonScroller {
     this.isBraking = active;
     if (!this.isRunning) return;
 
-    if (active) {
+    if (active || this.isTrackpadYielding) {
       this.targetSpeed = 0;
-    } else if (this.isUpwardSlowdown) {
-      this.targetSpeed = this.getSlowdownSpeed();
     } else {
       this.targetSpeed = this.cruiseSpeed;
     }
     this.notifyState();
   }
 
-  // Temporary Speed Slowdown (Two-finger scroll up): allows effortless upward manual scrolling
-  setUpwardSlowdown(active) {
-    if (this.isUpwardSlowdown === active) return;
-    this.isUpwardSlowdown = active;
+  // Two-Finger Trackpad Yield: drops to 0 ("close to pause") while scrolling/holding,
+  // and smoothly accelerates back to cruising speed when fingers are off.
+  setTrackpadYield(active) {
+    if (this.isTrackpadYielding === active) return;
+    this.isTrackpadYielding = active;
     if (!this.isRunning) return;
 
-    if (this.isBraking) {
-      this.targetSpeed = 0;
-    } else if (active) {
+    if (active || this.isBraking) {
       this.subPixelRemainder = 0;
-      this.targetSpeed = this.getSlowdownSpeed();
+      this.targetSpeed = 0;
     } else {
       this.targetSpeed = this.cruiseSpeed;
     }
@@ -215,7 +203,7 @@ class WebtoonScroller {
     this.onStateChange({
       isRunning: this.isRunning,
       isBraking: this.isBraking,
-      isUpwardSlowdown: this.isUpwardSlowdown,
+      isTrackpadYielding: this.isTrackpadYielding,
       cruiseSpeed: this.cruiseSpeed,
       currentSpeed: this.currentSpeed,
       progress: this.getProgress()
@@ -229,14 +217,16 @@ class WebtoonScroller {
     this.lastTimestamp = now;
     const dtSeconds = dt / 1000;
 
-    // Organic Apple-grade exponential spring physics (snappy natural response & recovery)
+    // Organic exponential spring physics:
+    // Deceleration (8.0): frictionless, rapid drop to pause when touching trackpad.
+    // Acceleration (4.2): gentle, luxurious ease-in resumption when fingers are off.
     const isDecelerating = this.targetSpeed < this.currentSpeed;
-    const lambda = isDecelerating ? 8.0 : 6.0;
+    const lambda = isDecelerating ? 8.0 : 4.2;
     const decay = Math.exp(-lambda * dtSeconds);
 
     this.currentSpeed = this.targetSpeed + (this.currentSpeed - this.targetSpeed) * decay;
 
-    if (Math.abs(this.currentSpeed - this.targetSpeed) < 0.015) {
+    if (Math.abs(this.currentSpeed - this.targetSpeed) < 0.01) {
       this.currentSpeed = this.targetSpeed;
     }
 
