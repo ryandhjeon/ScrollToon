@@ -145,12 +145,13 @@ class WebtoonClutch {
         if (this.upwardSlowdownTimer) {
           clearTimeout(this.upwardSlowdownTimer);
         }
+        // Brief slowdown duration (180ms) so autoscroll naturally resumes downward immediately
         this.upwardSlowdownTimer = setTimeout(() => {
           this.scroller.setUpwardSlowdown(false);
           this.upwardSlowdownTimer = null;
-        }, 500);
-      } else if (e.deltaY > 5 && this.scroller.isUpwardSlowdown) {
-        // Quick release when user resumes downward scroll
+        }, 180);
+      } else if (e.deltaY > 1 && this.scroller.isUpwardSlowdown) {
+        // Immediate release when user resumes downward scroll
         if (this.upwardSlowdownTimer) {
           clearTimeout(this.upwardSlowdownTimer);
           this.upwardSlowdownTimer = null;

@@ -158,8 +158,8 @@ class WebtoonScroller {
   }
 
   getSlowdownSpeed() {
-    // Gentle drift (0.2x - 0.4x) allowing effortless manual review when scrolling up
-    return Math.max(0.2, Math.min(0.4, Math.round(this.cruiseSpeed * 0.3 * 10) / 10));
+    // Brief, natural speed dip (~50% of cruise speed, min 0.3x) so it scrolls down naturally
+    return Math.max(0.3, Math.round(this.cruiseSpeed * 0.5 * 10) / 10);
   }
 
   setCruiseSpeed(speed) {
@@ -229,9 +229,9 @@ class WebtoonScroller {
     this.lastTimestamp = now;
     const dtSeconds = dt / 1000;
 
-    // Organic Apple-grade exponential spring physics (7.0 for rapid deceleration response)
+    // Organic Apple-grade exponential spring physics (snappy natural response & recovery)
     const isDecelerating = this.targetSpeed < this.currentSpeed;
-    const lambda = isDecelerating ? 7.0 : 3.8;
+    const lambda = isDecelerating ? 8.0 : 6.0;
     const decay = Math.exp(-lambda * dtSeconds);
 
     this.currentSpeed = this.targetSpeed + (this.currentSpeed - this.targetSpeed) * decay;
