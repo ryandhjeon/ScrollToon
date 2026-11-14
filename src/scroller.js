@@ -183,15 +183,18 @@ class WebtoonScroller {
     this.notifyState();
   }
 
-  // Two-Finger Trackpad Yield: drops to 0 ("close to pause") while scrolling/holding,
+  // Two-Finger Trackpad Yield: drops immediately to 0 ("close to pause") while scrolling,
   // and smoothly accelerates back to cruising speed when fingers are off.
   setTrackpadYield(active) {
     if (this.isTrackpadYielding === active) return;
     this.isTrackpadYielding = active;
     if (!this.isRunning) return;
 
-    if (active || this.isBraking) {
+    if (active) {
+      this.currentSpeed = 0; // Cut downward velocity immediately so trackpad has full free control
+      this.targetSpeed = 0;
       this.subPixelRemainder = 0;
+    } else if (this.isBraking) {
       this.targetSpeed = 0;
     } else {
       this.targetSpeed = this.cruiseSpeed;

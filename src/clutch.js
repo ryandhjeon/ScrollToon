@@ -32,7 +32,6 @@ class WebtoonClutch {
     this.onDoubleTapClick = null;
     this.onKeyDown = null;
     this.onWheel = null;
-    this.onScrollEnd = null;
     this.trackpadYieldTimer = null;
 
     this.init();
@@ -131,39 +130,28 @@ class WebtoonClutch {
     window.addEventListener('click', this.onDoubleTapClick);
 
     // TWO-FINGER TRACKPAD TOUCH & HOLD -> CLOSE TO PAUSE
-    // When the user touches, scrolls, or holds with two fingers, autoscroll drops to 0 ("close to pause").
-    // When fingers are lifted, autoscroll seamlessly accelerates and scrolls down again.
+    // When the user touches, scrolls, or adjusts with two fingers, autoscroll drops to 0 immediately.
+    // When fingers are lifted, autoscroll smoothly accelerates and scrolls down again.
     this.onWheel = (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
       if (!this.scroller.isRunning) return;
       if (e.ctrlKey) return; // Ignore pinch-to-zoom gestures
 
-      // Check for any deliberate two-finger trackpad or wheel movement
-      if (Math.abs(e.deltaY) > 0.5 || Math.abs(e.deltaX) > 0.5) {
+      // Trigger yield immediately on any trackpad movement (even microscopic)
+      if (Math.abs(e.deltaY) > 0.1 || Math.abs(e.deltaX) > 0.1) {
         this.scroller.setTrackpadYield(true);
 
         if (this.trackpadYieldTimer) {
           clearTimeout(this.trackpadYieldTimer);
         }
-        // Seamless resumption: 280ms after finger movement ceases, autoscroll glides forward
+        // Resumes smoothly after finger movement ceases (450ms hold)
         this.trackpadYieldTimer = setTimeout(() => {
           this.scroller.setTrackpadYield(false);
           this.trackpadYieldTimer = null;
-        }, 280);
+        }, 450);
       }
     };
     window.addEventListener('wheel', this.onWheel, { capture: true, passive: true });
-
-    // Chrome 114+ native scrollend listener: instant seamless handover when momentum finishes
-    this.onScrollEnd = () => {
-      if (!this.scroller.isRunning || !this.scroller.isTrackpadYielding) return;
-      if (this.trackpadYieldTimer) {
-        clearTimeout(this.trackpadYieldTimer);
-        this.trackpadYieldTimer = null;
-      }
-      this.scroller.setTrackpadYield(false);
-    };
-    window.addEventListener('scrollend', this.onScrollEnd, { passive: true });
   }
 
   setSpeedStep(step) {
@@ -254,9 +242,6 @@ class WebtoonClutch {
     }
     if (this.onWheel) {
       window.removeEventListener('wheel', this.onWheel, { capture: true, passive: true });
-    }
-    if (this.onScrollEnd) {
-      window.removeEventListener('scrollend', this.onScrollEnd, { passive: true });
     }
   }
 }
