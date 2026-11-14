@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] - 2026-11-13 *(Current Active Release)*
 
 ### 🚀 Added
+- **Two-Finger Upward Scroll Assistance**: Automatically detects when the reader scrolls up with two fingers on their trackpad (or wheel) and temporarily dampens downward autoscroll to a gentle crawl (`0.2x` - `0.4x`). This eliminates resistance so the reader can review past panels with ease, returning smoothly to full cruise speed when released.
 - **Speed Limit Increased to 7.0x**: Boosted top cruising speed limit from 6.0x to 7.0x in the scroller engine, and expanded the popup default speed slider to 7.0x.
 - **Configurable Bracket Step Size**: New slider in popup settings allowing users to customize how much speed changes per <kbd>[</kbd> and <kbd>]</kbd> press (`±0.1x` to `±1.0x`).
 - **Live Tab Settings Synchronization**: Modifications in the popup settings immediately sync live to open tabs without requiring a page refresh.

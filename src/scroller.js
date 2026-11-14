@@ -13,6 +13,7 @@ class WebtoonScroller {
     this.targetSpeed = 0;
     this.isRunning = false;
     this.isBraking = false; // Left-Click hold
+    this.isUpwardSlowdown = false; // Two-finger scroll up slowdown
 
     // Sub-pixel accumulator
     this.subPixelRemainder = 0;
@@ -126,6 +127,7 @@ class WebtoonScroller {
     if (this.isRunning) return;
     this.isRunning = true;
     this.isBraking = false;
+    this.isUpwardSlowdown = false;
     this.targetSpeed = this.cruiseSpeed;
     this.lastTimestamp = performance.now();
     this.loop(this.lastTimestamp);
@@ -136,6 +138,7 @@ class WebtoonScroller {
     if (!this.isRunning) return;
     this.isRunning = false;
     this.isBraking = false;
+    this.isUpwardSlowdown = false;
     this.targetSpeed = 0;
     this.currentSpeed = 0;
     this.subPixelRemainder = 0;
@@ -154,10 +157,19 @@ class WebtoonScroller {
     }
   }
 
+  getSlowdownSpeed() {
+    // Gentle drift (0.2x - 0.4x) allowing effortless manual review when scrolling up
+    return Math.max(0.2, Math.min(0.4, Math.round(this.cruiseSpeed * 0.3 * 10) / 10));
+  }
+
   setCruiseSpeed(speed) {
     this.cruiseSpeed = Math.max(0.2, Math.min(7.0, Math.round(speed * 10) / 10));
     if (this.isRunning && !this.isBraking) {
-      this.targetSpeed = this.cruiseSpeed;
+      if (this.isUpwardSlowdown) {
+        this.targetSpeed = this.getSlowdownSpeed();
+      } else {
+        this.targetSpeed = this.cruiseSpeed;
+      }
     }
     this.notifyState();
   }
@@ -172,7 +184,30 @@ class WebtoonScroller {
     this.isBraking = active;
     if (!this.isRunning) return;
 
-    this.targetSpeed = active ? 0 : this.cruiseSpeed;
+    if (active) {
+      this.targetSpeed = 0;
+    } else if (this.isUpwardSlowdown) {
+      this.targetSpeed = this.getSlowdownSpeed();
+    } else {
+      this.targetSpeed = this.cruiseSpeed;
+    }
+    this.notifyState();
+  }
+
+  // Temporary Speed Slowdown (Two-finger scroll up): allows effortless upward manual scrolling
+  setUpwardSlowdown(active) {
+    if (this.isUpwardSlowdown === active) return;
+    this.isUpwardSlowdown = active;
+    if (!this.isRunning) return;
+
+    if (this.isBraking) {
+      this.targetSpeed = 0;
+    } else if (active) {
+      this.subPixelRemainder = 0;
+      this.targetSpeed = this.getSlowdownSpeed();
+    } else {
+      this.targetSpeed = this.cruiseSpeed;
+    }
     this.notifyState();
   }
 
@@ -180,6 +215,7 @@ class WebtoonScroller {
     this.onStateChange({
       isRunning: this.isRunning,
       isBraking: this.isBraking,
+      isUpwardSlowdown: this.isUpwardSlowdown,
       cruiseSpeed: this.cruiseSpeed,
       currentSpeed: this.currentSpeed,
       progress: this.getProgress()
@@ -193,9 +229,9 @@ class WebtoonScroller {
     this.lastTimestamp = now;
     const dtSeconds = dt / 1000;
 
-    // Organic Apple-grade exponential spring physics
+    // Organic Apple-grade exponential spring physics (7.0 for rapid deceleration response)
     const isDecelerating = this.targetSpeed < this.currentSpeed;
-    const lambda = isDecelerating ? 5.2 : 3.8;
+    const lambda = isDecelerating ? 7.0 : 3.8;
     const decay = Math.exp(-lambda * dtSeconds);
 
     this.currentSpeed = this.targetSpeed + (this.currentSpeed - this.targetSpeed) * decay;

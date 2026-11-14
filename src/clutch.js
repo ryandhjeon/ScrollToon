@@ -31,6 +31,8 @@ class WebtoonClutch {
     this.onAuxMouseDown = null;
     this.onDoubleTapClick = null;
     this.onKeyDown = null;
+    this.onWheel = null;
+    this.upwardSlowdownTimer = null;
 
     this.init();
   }
@@ -126,6 +128,37 @@ class WebtoonClutch {
       }
     };
     window.addEventListener('click', this.onDoubleTapClick);
+
+    // TWO-FINGER SCROLL UP -> TEMPORARY SPEED SLOWDOWN
+    // Lets users effortlessly scroll up with two fingers to review past panels without engine resistance
+    this.onWheel = (e) => {
+      if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
+      if (!this.scroller.isRunning) return;
+
+      // Ensure vertical scroll dominates horizontal gestures
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+
+      // Upward scroll detected (two-finger swipe up or mouse wheel up)
+      if (e.deltaY < -2) {
+        this.scroller.setUpwardSlowdown(true);
+
+        if (this.upwardSlowdownTimer) {
+          clearTimeout(this.upwardSlowdownTimer);
+        }
+        this.upwardSlowdownTimer = setTimeout(() => {
+          this.scroller.setUpwardSlowdown(false);
+          this.upwardSlowdownTimer = null;
+        }, 500);
+      } else if (e.deltaY > 5 && this.scroller.isUpwardSlowdown) {
+        // Quick release when user resumes downward scroll
+        if (this.upwardSlowdownTimer) {
+          clearTimeout(this.upwardSlowdownTimer);
+          this.upwardSlowdownTimer = null;
+        }
+        this.scroller.setUpwardSlowdown(false);
+      }
+    };
+    window.addEventListener('wheel', this.onWheel, { capture: true, passive: true });
   }
 
   setSpeedStep(step) {
@@ -209,6 +242,13 @@ class WebtoonClutch {
     }
     if (this.onKeyDown) {
       window.removeEventListener('keydown', this.onKeyDown);
+    }
+    if (this.upwardSlowdownTimer) {
+      clearTimeout(this.upwardSlowdownTimer);
+      this.upwardSlowdownTimer = null;
+    }
+    if (this.onWheel) {
+      window.removeEventListener('wheel', this.onWheel, { capture: true, passive: true });
     }
   }
 }

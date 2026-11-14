@@ -18,7 +18,7 @@ ScrollToon gives you a smooth, hands-free reading experience. You get steady scr
 - **Hold to Pause (Clutch Brake):** Hold the left mouse button to freeze the screen on dialogue or art. Release to continue scrolling.
 - **Clear Comic Art:** The control bar fades to near-transparent while you read. It never blurs the panels.
 - **No Blank Loading Boxes:** Images preload 3500 pixels ahead so you never wait for pictures to load.
-- **Normal Trackpad Use:** Scroll up or down with your trackpad anytime without turning off the tool.
+- **Effortless Trackpad Review:** Scroll up with two fingers anytime to look back at past panels. The tool slows down automatically so you do not fight the screen.
 - **Custom Speed Steps:** Choose how much your speed changes when you press <kbd>[</kbd> or <kbd>]</kbd>.
 
 ---
