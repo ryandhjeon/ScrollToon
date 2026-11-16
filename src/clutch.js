@@ -129,26 +129,36 @@ class WebtoonClutch {
     };
     window.addEventListener('click', this.onDoubleTapClick);
 
-    // TWO-FINGER TRACKPAD TOUCH & HOLD -> CLOSE TO PAUSE
-    // When the user touches, scrolls, or adjusts with two fingers, autoscroll drops to 0 immediately.
-    // When fingers are lifted, autoscroll smoothly accelerates and scrolls down again.
+    // TWO-FINGER SCROLL UP -> PAUSE / YIELD (Scrolling down continues uninterrupted)
+    // Scrolling up with two fingers pauses autoscroll so you can review previous panels easily.
+    // Scrolling down with two fingers does NOT pause autoscroll.
     this.onWheel = (e) => {
       if (e.target && e.target.closest && e.target.closest('#scrolltoon-host')) return;
       if (!this.scroller.isRunning) return;
       if (e.ctrlKey) return; // Ignore pinch-to-zoom gestures
 
-      // Trigger yield immediately on any trackpad movement (even microscopic)
-      if (Math.abs(e.deltaY) > 0.1 || Math.abs(e.deltaX) > 0.1) {
+      // Ignore predominantly horizontal gestures
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+
+      if (e.deltaY < -0.5) {
+        // Scrolling UP: pause autoscroll so user can review panels easily
         this.scroller.setTrackpadYield(true);
 
         if (this.trackpadYieldTimer) {
           clearTimeout(this.trackpadYieldTimer);
         }
-        // 250ms window: yields instantly during trackpad motion, resumes promptly when released
+        // Resumes smoothly after upward finger movement ceases
         this.trackpadYieldTimer = setTimeout(() => {
           this.scroller.setTrackpadYield(false);
           this.trackpadYieldTimer = null;
         }, 250);
+      } else if (e.deltaY > 0.5 && this.scroller.isTrackpadYielding) {
+        // Scrolling DOWN: immediately cancel any active yield so downward scrolling continues uninterrupted
+        if (this.trackpadYieldTimer) {
+          clearTimeout(this.trackpadYieldTimer);
+          this.trackpadYieldTimer = null;
+        }
+        this.scroller.setTrackpadYield(false);
       }
     };
     window.addEventListener('wheel', this.onWheel, { capture: true, passive: true });

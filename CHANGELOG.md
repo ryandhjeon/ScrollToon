@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] - 2026-11-13 *(Current Active Release)*
 
 ### 🚀 Added
-- **Two-Finger Trackpad Touch & Hold Pause**: Automatically drops autoscroll speed smoothly to 0 ("close to pause") whenever the reader touches, scrolls, or holds with two fingers on their trackpad. The moment fingers leave the trackpad, autoscroll seamlessly resumes and accelerates downward with gentle exponential spring physics (`lambda = 4.2`).
+- **Upward-Only Trackpad Pause**: Scrolling up with two fingers temporarily pauses autoscroll so readers can review panels with zero downward resistance. Scrolling down with two fingers now continues uninterrupted without pausing.
 - **Speed Limit Increased to 7.0x**: Boosted top cruising speed limit from 6.0x to 7.0x in the scroller engine, and expanded the popup default speed slider to 7.0x.
 - **Configurable Bracket Step Size**: New slider in popup settings allowing users to customize how much speed changes per <kbd>[</kbd> and <kbd>]</kbd> press (`±0.1x` to `±1.0x`).
 - **Live Tab Settings Synchronization**: Modifications in the popup settings immediately sync live to open tabs without requiring a page refresh.
